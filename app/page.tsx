@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion';
 import StarField from '@/components/StarField';
 import { useTheme, type Theme } from '@/components/ThemeProvider';
-import FamousCharts from '@/components/home/FamousCharts';
 import AnnouncementModal from '@/components/AnnouncementModal';
 
 // ─── 滚动入场 wrapper ────────────────────────────────────
@@ -1029,11 +1028,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* ══ 名人命盘库 ════════════════════════════════════ */}
-      <FadeIn>
-        <FamousCharts colors={c} theme={theme} />
-      </FadeIn>
 
       {/* ══ 合盘入口 ══════════════════════════════════════ */}
       <section className="relative z-10 px-6 md:px-10 lg:px-14 py-20">
