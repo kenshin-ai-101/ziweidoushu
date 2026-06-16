@@ -1006,35 +1006,81 @@ body:has(.oracle-subpage) {
   color: #111;
   text-decoration: none;
 }
-.oracle-subpage-footer {
-  max-width: 1160px;
-  margin: 30px auto 0;
-  padding: 28px 24px 44px;
-  color: #8c8579;
-  font-size: 12px;
-  line-height: 1.7;
-  border-top: 1px solid rgba(0,0,0,0.08);
+.oracle-site-footer {
+  width: 100%;
+  margin-top: 80px;
+  padding: clamp(14px, 2vw, 24px) clamp(16px, 3vw, 32px);
 }
-.oracle-subpage-footer-row {
+.oracle-site-footer-top {
   display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0 8px;
+  gap: 12px;
 }
-.oracle-subpage-footer a {
-  color: inherit;
+.oracle-site-footer-back {
+  color: #6b6b6b;
+  font-size: 12px;
+}
+.oracle-site-footer-back a {
+  color: #6b6b6b;
   text-decoration: none;
+  transition: color 0.2s ease;
 }
-.oracle-subpage-footer em {
-  font-style: normal;
+.oracle-site-footer-back a:hover {
+  color: #333;
 }
-.oracle-subpage-footer span {
-  color: rgba(140,133,121,0.45);
+.oracle-site-footer-back-placeholder {
+  opacity: 0;
 }
-.oracle-subpage-footer p {
-  max-width: 820px;
-  margin: 8px 0;
-  line-height: 1.8;
+.oracle-site-footer-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: clamp(8px, 1.5vw, 14px);
+  color: #6b6b6b;
+  font-size: 11px;
+}
+.oracle-site-footer-links a {
+  color: #6b6b6b;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.oracle-site-footer-links a:hover {
+  color: #333;
+}
+.oracle-site-footer-links span {
+  color: #ddd;
+}
+.oracle-site-footer-bottom {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #f0f0f0;
+  text-align: center;
+  color: #6b6b6b;
+  font-size: 11px;
+  line-height: 1.75;
+}
+.oracle-site-footer-bottom p {
+  margin: 0;
+}
+.oracle-site-footer-bottom p + p {
+  margin-top: 6px;
+}
+.oracle-site-footer-bottom a {
+  color: #6b6b6b;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.oracle-site-footer-bottom a:hover {
+  color: #333;
+}
+.oracle-site-footer-bottom span {
+  margin: 0 6px;
+  color: #ddd;
+}
+.oracle-site-footer-host {
+  color: #9b9b9b !important;
 }
 
 @media (max-width: 860px) {
@@ -1097,8 +1143,15 @@ body:has(.oracle-subpage) {
   .oracle-legal-actions {
     display: block;
   }
-  .oracle-subpage-footer {
-    margin-top: 18px;
-    padding: 24px 20px 36px;
+  .oracle-site-footer {
+    margin-top: 60px;
+    padding: clamp(14px, 2vw, 20px) 16px;
+  }
+  .oracle-site-footer-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .oracle-site-footer-links {
+    justify-content: flex-start;
   }
 }

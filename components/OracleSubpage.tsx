@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { OracleFooter } from '@/components/OracleFooter';
 import BirthForm from '@/components/BirthForm';
 import ChartBoard from '@/components/ChartBoard';
 import InsightPanel from '@/components/InsightPanel';
@@ -90,7 +91,7 @@ export function OracleChrome({
   return (
     <main className={`oracle-subpage oracle-subpage--${tone} ${compact ? 'oracle-subpage--compact' : ''} ${variant ? `oracle-subpage--${variant}` : ''}`}>
       <header className="oracle-subpage-header">
-        <Link className="oracle-subpage-logo" href="/">ORACLE</Link>
+        <Link className="oracle-subpage-logo" href="/">ORACLE{variant === 'terms' ? '®' : ''}</Link>
         <nav className="oracle-subpage-actions" aria-label="主导航">
           <Link href="/chart">起盘</Link>
           <span>·</span>
@@ -99,18 +100,20 @@ export function OracleChrome({
         </nav>
       </header>
       {children}
-      <OracleFooter />
+      <OracleFooter showBackLink={variant !== 'chart'} />
     </main>
   );
 }
 
 export function OracleHero({
+  pretitle,
   eyebrow,
   title,
   subtitle,
   description,
   stats,
 }: {
+  pretitle?: string;
   eyebrow: string;
   title: string;
   subtitle: string;
@@ -119,6 +122,7 @@ export function OracleHero({
 }) {
   return (
     <section className="oracle-subpage-hero">
+      {pretitle && <p className="oracle-subpage-pretitle">{pretitle}</p>}
       <span>{eyebrow}</span>
       <h1>{title}</h1>
       <p className="oracle-subpage-subtitle">{subtitle}</p>
@@ -128,30 +132,7 @@ export function OracleHero({
   );
 }
 
-export function OracleFooter() {
-  return (
-    <footer className="oracle-subpage-footer">
-      <div className="oracle-subpage-footer-row">
-        <Link href="/privacy">隐私政策</Link>
-        <span>·</span>
-        <Link href="/terms">服务条款</Link>
-        <span>·</span>
-        <a href="mailto:feedback@wdyziweidoushu666.com?subject=违法和不良信息举报">违法和不良信息举报</a>
-        <span>·</span>
-        <a href="https://www.12377.cn/" target="_blank" rel="noopener noreferrer">12377 举报</a>
-      </div>
-      <p>本平台基于中国传统文化研究，仅供学习参考，不构成医疗、投资、婚姻、法律或重大决策建议。AI 输出非医疗诊断。</p>
-      <div className="oracle-subpage-footer-row">
-        <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">京ICP备2026027116号</a>
-        <span>·</span>
-        <a href="http://www.beian.gov.cn/portal/registerSystemInfo" target="_blank" rel="noopener noreferrer">京公网安备11010502061088号</a>
-        <span>·</span>
-        <em>©2026 Oracle</em>
-      </div>
-      <p>主办主体：两江新区旺多鱼网络科技工作室（个体工商户） · 客服：wdy778@outlook.com</p>
-    </footer>
-  );
-}
+export { OracleFooter } from '@/components/OracleFooter';
 
 export function SectionTitle({
   index,
@@ -181,20 +162,26 @@ export function SanjiPage({
   modules,
   quote,
   quoteFrom,
+  quoteSource,
   intro,
   statLine,
   sectionTitle,
   sectionSubtitle,
+  quoteIndex = '02',
+  beforeQuote,
   children,
 }: {
   category: SanJiCategory;
   modules: NiModule[];
   quote: string;
   quoteFrom: string;
+  quoteSource?: string;
   intro: string;
   statLine: string;
   sectionTitle: string;
   sectionSubtitle: string;
+  quoteIndex?: string;
+  beforeQuote?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   const config = SANJI_CATEGORIES.find(item => item.key === category) ?? SANJI_CATEGORIES[0];
@@ -233,11 +220,16 @@ export function SanjiPage({
         <p className="oracle-scroll-hint">← 横向滑动浏览全部学科 →</p>
       </section>
 
+      {beforeQuote}
+
       <section className="oracle-content-band">
-        <SectionTitle index="02" title="倪师一言" />
+        <SectionTitle index={quoteIndex} title="倪师一言" />
         <div className="oracle-quote-panel">
           <p>{quote}</p>
-          <blockquote>「{quoteFrom}」</blockquote>
+          <blockquote>
+            <span>「{quoteFrom}」</span>
+            {quoteSource && <cite>— {quoteSource}</cite>}
+          </blockquote>
         </div>
         {children}
         <div className="oracle-sanity-nav">
@@ -816,36 +808,6 @@ export function OracleStyles() {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
         gap: 20px;
-      }
-      .oracle-subpage-footer {
-        max-width: 1160px;
-        margin: 30px auto 0;
-        padding: 28px 24px 44px;
-        color: #8c8579;
-        font-size: 12px;
-        line-height: 1.7;
-        border-top: 1px solid rgba(0,0,0,0.08);
-      }
-      .oracle-subpage-footer-row {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 0 8px;
-      }
-      .oracle-subpage-footer a {
-        color: inherit;
-        text-decoration: none;
-      }
-      .oracle-subpage-footer em {
-        font-style: normal;
-      }
-      .oracle-subpage-footer span {
-        color: rgba(140,133,121,0.45);
-      }
-      .oracle-subpage-footer p {
-        max-width: 820px;
-        margin: 8px 0;
-        line-height: 1.8;
       }
       @media (max-width: 860px) {
         .oracle-subpage-header { padding: 0 16px; height: 56px; }

@@ -316,24 +316,15 @@ export default function HomePage() {
         </div>
 
         <div className="oracle-legal">
-          <div className="oracle-legal-row">
-            <Link href="/privacy">隐私政策</Link>
-            <span>·</span>
-            <Link href="/terms">服务条款</Link>
-            <span>·</span>
-            <a href="mailto:feedback@wdyziweidoushu666.com?subject=违法和不良信息举报">违法和不良信息举报</a>
-            <span>·</span>
-            <a href="https://www.12377.cn/" target="_blank" rel="noopener noreferrer">12377 举报</a>
-          </div>
-          <p>本平台基于中国传统文化研究，仅供学习参考，不构成医疗、投资、婚姻、法律或重大决策建议。AI 输出非医疗诊断。</p>
-          <div className="oracle-legal-row">
-            <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">京ICP备2026027116号</a>
-            <span>·</span>
-            <a href="http://www.beian.gov.cn/portal/registerSystemInfo" target="_blank" rel="noopener noreferrer">京公网安备11010502061088号</a>
-            <span>·</span>
-            <em>©2026 Oracle</em>
-          </div>
-          <p>主办主体：两江新区旺多鱼网络科技工作室（个体工商户） · 客服：wdy778@outlook.com</p>
+          <Link href="/terms">免责声明</Link>
+          <span>·</span>
+          <Link href="/privacy">隐私</Link>
+          <span>·</span>
+          <a href="mailto:feedback@wdyziweidoushu666.com?subject=违法和不良信息举报">举报</a>
+          <span>·</span>
+          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">京ICP备2026027116号</a>
+          <span>·</span>
+          <span>©2026 Oracle</span>
         </div>
       </footer>
 
@@ -737,34 +728,25 @@ export default function HomePage() {
         }
 
         .oracle-legal {
-          width: min(760px, calc(100vw - 360px));
-          min-width: 420px;
-          display: grid;
-          gap: 6px;
-          justify-content: flex-end;
-          color: #6b6b6b;
-          font-size: 12px;
-          line-height: 1.65;
-          text-align: right;
-        }
-
-        .oracle-legal-row {
           display: flex;
           flex-wrap: wrap;
           align-items: center;
           justify-content: flex-end;
-          gap: 0 8px;
-        }
-
-        .oracle-legal a,
-        .oracle-legal em {
+          gap: 8px;
+          max-width: none;
           color: #6b6b6b;
-          font-style: normal;
-          text-decoration: none;
+          font-size: 12px;
+          line-height: 1.65;
         }
 
-        .oracle-legal p {
-          margin: 0;
+        .oracle-legal a {
+          color: #6b6b6b;
+          text-decoration: none;
+          transition: color 0.2s ease;
+        }
+
+        .oracle-legal a:hover {
+          color: #333;
         }
 
         .oracle-legal span {
@@ -826,13 +808,6 @@ export default function HomePage() {
           }
 
           .oracle-legal {
-            width: min(100%, 520px);
-            min-width: 0;
-            justify-content: flex-start;
-            text-align: left;
-          }
-
-          .oracle-legal-row {
             justify-content: flex-start;
           }
         }
