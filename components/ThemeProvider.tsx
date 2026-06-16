@@ -33,6 +33,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('ziwei-theme', theme);
   }, [theme, mounted]);
 
+  useEffect(() => {
+    const forceTheme = (event: Event) => {
+      const next = (event as CustomEvent<Theme>).detail;
+      if (next === 'light' || next === 'dark') setTheme(next);
+    };
+    window.addEventListener('ziwei-force-theme', forceTheme);
+    return () => window.removeEventListener('ziwei-force-theme', forceTheme);
+  }, []);
+
   const toggle = () => {
     const root = document.documentElement;
     root.classList.add('theme-transitioning');

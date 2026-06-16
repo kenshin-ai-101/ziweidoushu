@@ -429,3 +429,676 @@ body {
   body { background: white; color: #1a1a18; }
   @page { margin: 1.2cm; size: A4 landscape; }
 }
+
+/* ─── Oracle production-style subpages ───────────────────── */
+body:has(.oracle-subpage) {
+  background: #fafafa !important;
+}
+
+.oracle-subpage {
+  --oracle-page-accent: #111;
+  min-height: 100vh;
+  background: #fafafa !important;
+  color: #111;
+  font-family: Inter, "Helvetica Neue", Arial, "PingFang SC", sans-serif;
+}
+.oracle-subpage--gold { --oracle-page-accent: #111; }
+.oracle-subpage--green { --oracle-page-accent: #111; }
+.oracle-subpage--violet { --oracle-page-accent: #111; }
+.oracle-subpage--ink { --oracle-page-accent: #111; }
+
+.oracle-subpage-header {
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  height: 86px;
+  padding: 24px 32px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  background: rgba(250,250,250,0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.oracle-subpage-logo {
+  color: #000;
+  font-size: 42px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+.oracle-subpage-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #d4d4d4;
+  font-size: 14px;
+}
+.oracle-subpage-actions a,
+.oracle-subpage-actions button {
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 999px;
+  background: transparent;
+  color: #111;
+  padding: 4px 10px;
+  text-decoration: none;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.oracle-subpage-actions button {
+  margin-left: 8px;
+  background: #000;
+  color: #fff;
+  border-color: #000;
+  padding: 5px 14px;
+}
+.oracle-subpage-actions::after {
+  content: "☰";
+  color: #111;
+  margin-left: 10px;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.oracle-subpage-hero {
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 240px;
+  padding: 12px 34px 12px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+.oracle-subpage-hero > span,
+.oracle-section-title span,
+.oracle-panel > span,
+.oracle-module-status {
+  color: #6b6b6b;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.oracle-subpage-hero h1 {
+  margin: 8px 0 0 !important;
+  color: #000 !important;
+  font-size: clamp(56px, 7vw, 90px) !important;
+  line-height: 0.95 !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.02em !important;
+}
+.oracle-subpage-subtitle {
+  margin: 10px 0 0;
+  color: #111;
+  font-size: clamp(18px, 2.4vw, 32px);
+  font-weight: 600;
+}
+.oracle-subpage-description {
+  max-width: 720px;
+  margin: 18px 0 0;
+  color: #595959;
+  font-size: 16px;
+  line-height: 1.8;
+}
+.oracle-subpage-stats {
+  width: fit-content;
+  margin-top: 18px;
+  color: #222;
+  font-size: 15px;
+}
+
+.oracle-content-band {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 54px 34px;
+}
+.oracle-section-title {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.oracle-section-title h2 {
+  margin: 6px 0 0;
+  color: #111;
+  font-size: 32px;
+  line-height: 1.1;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+.oracle-section-title p {
+  margin: 8px 0 0;
+  color: #777;
+  font-size: 15px;
+}
+
+.oracle-module-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 300px;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 0 20px 18px;
+  margin: 0 -20px;
+  scroll-snap-type: x mandatory;
+}
+.oracle-module-card {
+  min-height: 440px;
+  padding: 22px;
+  border: 1px solid rgba(0,0,0,0.14);
+  border-radius: 0;
+  background: #fff;
+  color: #111;
+  text-align: left;
+  text-decoration: none;
+  scroll-snap-align: start;
+  transition: transform 180ms ease, border-color 180ms ease;
+}
+.oracle-module-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0,0,0,0.45);
+}
+.oracle-module-card strong,
+.oracle-module-card b,
+.oracle-module-card small,
+.oracle-module-card em {
+  display: block;
+}
+.oracle-module-card em {
+  margin-top: 86px;
+  color: #777;
+  font-size: 13px;
+  font-style: normal;
+}
+.oracle-module-card em + strong {
+  margin-top: 8px;
+}
+.oracle-module-card strong {
+  margin-top: 116px;
+  color: #777;
+  font-size: 15px;
+  font-weight: 500;
+}
+.oracle-module-card b {
+  margin-top: 4px;
+  font-size: 28px;
+  line-height: 1.15;
+}
+.oracle-module-card p {
+  white-space: pre-line;
+  margin: 18px 0;
+  color: #333;
+  font-size: 15px;
+  line-height: 1.75;
+}
+.oracle-module-card small {
+  color: #777;
+  font-size: 13px;
+}
+.oracle-subpage--green .oracle-module-rail {
+  grid-auto-flow: row;
+  grid-auto-columns: unset;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  overflow: visible;
+  padding: 0;
+  margin: 0;
+}
+.oracle-subpage--green .oracle-module-card {
+  min-height: 420px;
+}
+.oracle-subpage--green .oracle-module-card strong {
+  margin-top: 104px;
+}
+.oracle-subpage--green .oracle-scroll-hint {
+  display: none;
+}
+.oracle-scroll-hint {
+  text-align: center;
+  color: #aaa;
+  font-size: 13px;
+  margin: 2px 0 0;
+}
+
+.oracle-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 640px) minmax(260px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.oracle-form-grid--centered {
+  display: block;
+  max-width: 720px;
+}
+
+.oracle-subpage--chart .oracle-subpage-hero {
+  align-items: center;
+  text-align: center;
+  height: 162px;
+  padding: 10px 20px 0;
+}
+.oracle-subpage--chart .oracle-subpage-hero h1 {
+  width: auto !important;
+  font-size: 64px !important;
+  line-height: 64px !important;
+}
+.oracle-subpage--chart .oracle-subpage-subtitle {
+  display: none;
+}
+.oracle-subpage--chart .oracle-subpage-description {
+  margin-top: 12px;
+  max-width: none;
+  font-size: 16px;
+}
+.oracle-subpage--chart .oracle-content-band {
+  padding-top: 0;
+}
+.oracle-subpage--chart .oracle-form-grid--centered,
+.oracle-subpage--chart .oracle-form-note {
+  margin-left: auto;
+  margin-right: auto;
+}
+.oracle-form-card,
+.oracle-panel {
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 0;
+  background: #fff;
+  padding: 24px;
+}
+.oracle-form-note {
+  max-width: 720px;
+  margin-top: 18px;
+  color: #777;
+  text-align: center;
+  font-size: 13px;
+}
+.oracle-form-note p {
+  margin: 0 0 8px;
+  color: #555;
+}
+.oracle-form-note span {
+  color: #999;
+}
+.oracle-panel h3 {
+  margin: 8px 0 12px;
+  color: #111;
+  font-size: 22px;
+}
+.oracle-panel p,
+.oracle-note-text {
+  color: #555;
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.oracle-research-grid,
+.oracle-roadmap {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.oracle-roadmap {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.oracle-research-grid article,
+.oracle-roadmap article {
+  min-height: 150px;
+  border: 1px solid rgba(0,0,0,0.1);
+  background: #fff;
+  padding: 22px;
+}
+.oracle-research-grid article > span,
+.oracle-roadmap article > span {
+  color: #b9b9b9;
+  font-variant-numeric: tabular-nums;
+}
+.oracle-research-grid h3,
+.oracle-roadmap h3 {
+  margin: 18px 0 8px;
+  color: #111;
+  font-size: 20px;
+}
+.oracle-research-grid p,
+.oracle-roadmap p {
+  color: #666;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.oracle-quote-panel {
+  max-width: 900px;
+  color: #333;
+}
+.oracle-quote-panel p {
+  margin: 0 0 26px;
+  color: #333;
+  font-size: 17px;
+  line-height: 1.9;
+}
+.oracle-quote-panel blockquote {
+  margin: 0;
+  color: #111;
+  font-size: clamp(24px, 3vw, 38px);
+  font-weight: 900;
+  line-height: 1.35;
+}
+.oracle-inline-links {
+  margin-top: 28px;
+}
+.oracle-sanity-nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 28px;
+}
+.oracle-sanity-nav a,
+.oracle-back-home,
+.oracle-section-title a {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 78px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  color: #111;
+  padding: 16px 18px;
+  text-decoration: none;
+  font-size: 17px;
+}
+.oracle-sanity-nav a.is-active {
+  background: #111;
+  color: #fff;
+}
+.oracle-sanity-nav span {
+  margin-top: 4px;
+  color: inherit;
+  opacity: 0.58;
+  font-size: 13px;
+}
+.oracle-sanity-nav--cta a {
+  min-height: 92px;
+}
+.oracle-back-home {
+  display: inline-flex;
+  width: fit-content;
+  min-height: auto;
+  margin-top: 26px;
+  border-radius: 999px;
+  font-size: 14px;
+}
+.oracle-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.oracle-kpi-row strong {
+  display: block;
+  color: #111;
+  font-size: 42px;
+  line-height: 1;
+}
+.oracle-kpi-row small {
+  display: block;
+  margin-top: 10px;
+  color: #777;
+  font-size: 13px;
+  font-weight: 400;
+}
+.oracle-kpi-row--large {
+  margin-bottom: 26px;
+}
+
+.oracle-academy-stars {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid rgba(0,0,0,0.1);
+  border-left: 1px solid rgba(0,0,0,0.1);
+}
+.oracle-academy-stars a {
+  min-height: 96px;
+  border-right: 1px solid rgba(0,0,0,0.1);
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  background: #fff;
+  padding: 14px;
+  text-decoration: none;
+}
+.oracle-academy-stars strong,
+.oracle-academy-stars span,
+.oracle-academy-feature-grid b,
+.oracle-academy-feature-grid span,
+.oracle-academy-feature-grid small,
+.oracle-book-row span,
+.oracle-book-row b,
+.oracle-book-row p,
+.oracle-book-row small {
+  display: block;
+}
+.oracle-academy-stars strong {
+  color: #111;
+  font-size: 22px;
+}
+.oracle-academy-stars span {
+  margin-top: 6px;
+  color: #666;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.oracle-academy-feature-grid,
+.oracle-book-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.oracle-book-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.oracle-book-row--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.oracle-book-row--one {
+  grid-template-columns: 1fr;
+}
+.oracle-academy-feature-grid a,
+.oracle-book-row a {
+  min-height: 142px;
+  border: 1px solid rgba(0,0,0,0.1);
+  background: #fff;
+  padding: 18px;
+  color: #111;
+  text-decoration: none;
+}
+.oracle-academy-feature-grid b,
+.oracle-book-row b {
+  color: #111;
+  font-size: 21px;
+}
+.oracle-academy-feature-grid span,
+.oracle-book-row p {
+  margin-top: 8px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.oracle-academy-feature-grid small,
+.oracle-book-row small,
+.oracle-book-row span,
+.oracle-library-groups > div > span {
+  margin-top: 10px;
+  color: #888;
+  font-size: 12px;
+}
+.oracle-library-groups {
+  display: grid;
+  gap: 28px;
+}
+.oracle-library-groups h3 {
+  margin: 4px 0;
+  color: #111;
+  font-size: 28px;
+}
+.oracle-library-groups > div > p {
+  color: #666;
+}
+
+.oracle-legal-band {
+  padding-top: 0;
+}
+.oracle-subpage--terms .oracle-legal-band {
+  padding-top: 75px;
+}
+.oracle-legal-article {
+  max-width: 900px;
+  margin: 0 auto;
+  border: 1px solid rgba(0,0,0,0.1);
+  background: #fff;
+  padding: 52px 56px;
+  color: #111;
+}
+.oracle-subpage--terms .oracle-legal-article {
+  min-height: 1995px;
+}
+.oracle-legal-article h2 {
+  margin: 40px 0 14px;
+  color: #111;
+  font-size: 24px;
+  line-height: 1.2;
+}
+.oracle-legal-article h2:first-child {
+  margin-top: 0;
+}
+.oracle-legal-article p,
+.oracle-legal-article li {
+  color: #333;
+  font-size: 16px;
+  line-height: 1.95;
+}
+.oracle-number-list {
+  padding: 0;
+  list-style: none;
+}
+.oracle-number-list li {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+.oracle-number-list span {
+  color: #aaa;
+  font-variant-numeric: tabular-nums;
+}
+.oracle-legal-actions {
+  margin-top: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #777;
+  font-size: 13px;
+}
+.oracle-legal-actions a {
+  color: #111;
+  text-decoration: none;
+}
+.oracle-subpage-footer {
+  max-width: 1160px;
+  margin: 30px auto 0;
+  padding: 28px 24px 44px;
+  color: #8c8579;
+  font-size: 12px;
+  line-height: 1.7;
+  border-top: 1px solid rgba(0,0,0,0.08);
+}
+.oracle-subpage-footer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 8px;
+}
+.oracle-subpage-footer a {
+  color: inherit;
+  text-decoration: none;
+}
+.oracle-subpage-footer em {
+  font-style: normal;
+}
+.oracle-subpage-footer span {
+  color: rgba(140,133,121,0.45);
+}
+.oracle-subpage-footer p {
+  max-width: 820px;
+  margin: 8px 0;
+  line-height: 1.8;
+}
+
+@media (max-width: 860px) {
+  .oracle-subpage-header {
+    height: 64px;
+    padding: 18px 16px;
+  }
+  .oracle-subpage-logo {
+    font-size: 28px;
+  }
+  .oracle-subpage-actions {
+    font-size: 12px;
+  }
+  .oracle-subpage-actions button,
+  .oracle-subpage-actions::after {
+    display: none;
+  }
+  .oracle-subpage-hero {
+    min-height: 220px;
+    padding: 26px 20px 36px;
+  }
+  .oracle-subpage-hero h1 {
+    font-size: 36px !important;
+    line-height: 1 !important;
+  }
+  .oracle-subpage--chart .oracle-subpage-hero h1 {
+    font-size: 36px !important;
+    line-height: 1 !important;
+  }
+  .oracle-content-band {
+    padding: 38px 20px;
+  }
+  .oracle-section-title {
+    display: block;
+  }
+  .oracle-module-rail {
+    grid-auto-columns: 82vw;
+  }
+  .oracle-subpage--green .oracle-module-rail {
+    grid-template-columns: 1fr;
+  }
+  .oracle-module-card {
+    min-height: 380px;
+  }
+  .oracle-form-grid,
+  .oracle-research-grid,
+  .oracle-roadmap,
+  .oracle-sanity-nav,
+  .oracle-kpi-row,
+  .oracle-academy-feature-grid,
+  .oracle-book-row {
+    grid-template-columns: 1fr;
+  }
+  .oracle-academy-stars {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .oracle-legal-article {
+    padding: 30px 22px;
+  }
+  .oracle-legal-actions {
+    display: block;
+  }
+  .oracle-subpage-footer {
+    margin-top: 18px;
+    padding: 24px 20px 36px;
+  }
+}
