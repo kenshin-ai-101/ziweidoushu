@@ -1850,6 +1850,324 @@ body:has(.oracle-subpage) {
   }
 }
 
+.metis-academy-page {
+  min-height: 100vh;
+  background: #fafafa;
+  color: #000;
+  display: flex;
+  flex-direction: column;
+  font-family: Inter, "Helvetica Neue", Arial, "PingFang SC", sans-serif;
+}
+.metis-academy-main {
+  flex: 1;
+  padding-top: clamp(80px, 12vh, 140px);
+  padding-bottom: 40px;
+}
+.metis-academy-hero-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 3vw, 32px);
+  text-align: left;
+}
+.metis-academy-eyebrow {
+  margin-bottom: 16px;
+  color: #6b6b6b;
+  font-size: 14px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+.metis-academy-title {
+  margin: 0 0 20px;
+  color: #000;
+  font-size: clamp(36px, 7vw, 96px);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+}
+.metis-academy-subtitle {
+  margin-bottom: 16px;
+  color: #666;
+  font-size: clamp(14px, 1.5vw, 18px);
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.metis-academy-desc {
+  max-width: 640px;
+  margin: 0;
+  color: #666;
+  font-size: clamp(14px, 1.3vw, 16px);
+  line-height: 1.7;
+}
+.metis-academy-divider {
+  height: 1px;
+  width: 100%;
+  margin-top: 40px;
+  background: #000;
+}
+.metis-academy-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  max-width: 1200px;
+  margin: 24px auto 0;
+  padding: 0 clamp(16px, 3vw, 32px);
+  color: #666;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+.metis-academy-stats strong {
+  color: #000;
+}
+.metis-academy-stats-sep {
+  color: #ddd;
+}
+.metis-academy-band {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(40px, 6vw, 80px) clamp(16px, 3vw, 32px);
+}
+.metis-academy-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+}
+.metis-academy-section-title {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(12px, 2vw, 28px);
+  flex-wrap: wrap;
+}
+.metis-academy-section-index {
+  color: #6b6b6b;
+  font-size: 14px;
+  letter-spacing: 0.3em;
+  font-variant-numeric: tabular-nums;
+}
+.metis-academy-section-head h2 {
+  margin: 0;
+  color: #000;
+  font-size: clamp(22px, 2.5vw, 32px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.metis-academy-section-hint {
+  color: #6b6b6b;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+}
+.metis-academy-cta {
+  color: #000;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  border-bottom: 1px solid #000;
+  padding-bottom: 2px;
+}
+.obys-star-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.obys-star-card {
+  display: block;
+  padding: 18px 14px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 2px;
+  text-align: center;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.obys-star-card:hover {
+  border-color: #000;
+  transform: translateY(-2px);
+}
+.obys-star-card__name {
+  color: #000;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+.obys-star-card__brief {
+  margin-top: 6px;
+  color: #6b6b6b;
+  font-size: 14px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.metis-academy-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+.metis-academy-feature-card {
+  display: block;
+  padding: 24px 28px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 2px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.metis-academy-feature-card:hover {
+  border-color: #000;
+}
+.metis-academy-feature-title {
+  margin-bottom: 8px;
+  color: #000;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.metis-academy-feature-desc {
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.metis-academy-feature-link {
+  margin-top: 12px;
+  color: #000;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+}
+.metis-academy-classic-group {
+  margin-bottom: 40px;
+}
+.metis-academy-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e8e8e8;
+  flex-wrap: wrap;
+}
+.metis-academy-group-index {
+  color: #6b6b6b;
+  font-size: 14px;
+  letter-spacing: 0.3em;
+}
+.metis-academy-group-label {
+  color: #000;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.metis-academy-group-hint {
+  color: #6b6b6b;
+  font-size: 14px;
+}
+.metis-academy-book-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.metis-academy-book-card {
+  display: block;
+  padding: 22px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 2px;
+  text-decoration: none;
+  transition: all 0.25s;
+}
+.metis-academy-book-card:hover {
+  border-color: #000;
+}
+.metis-academy-book-meta {
+  margin-bottom: 6px;
+  color: #6b6b6b;
+  font-size: 14px;
+  letter-spacing: 0.2em;
+}
+.metis-academy-book-title {
+  margin-bottom: 10px;
+  color: #000;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.metis-academy-book-intro {
+  margin: 0 0 12px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.7;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.metis-academy-book-stats {
+  display: flex;
+  gap: 12px;
+  color: #6b6b6b;
+  font-size: 14px;
+}
+.metis-academy-book-stats-sep {
+  color: #ddd;
+}
+.metis-academy-footer {
+  width: 100%;
+  margin-top: 80px;
+  padding: clamp(14px, 2vw, 24px) clamp(16px, 3vw, 32px);
+}
+.metis-academy-footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.metis-academy-footer-left,
+.metis-academy-footer-right {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.5vw, 14px);
+  color: #6b6b6b;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.metis-academy-footer-right {
+  font-size: 11px;
+}
+.metis-academy-footer-left a,
+.metis-academy-footer-right a {
+  color: #6b6b6b;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.metis-academy-footer-right span {
+  color: #ddd;
+}
+
+.glass-static:hover {
+  border-color: rgba(0, 0, 0, 0.4) !important;
+}
+.knowledge-anchor {
+  scroll-margin-top: 96px;
+}
+
+@media (max-width: 720px) {
+  .metis-academy-section-head {
+    display: block;
+  }
+  .metis-academy-section-head h2 {
+    margin-top: 8px;
+  }
+  .metis-academy-cta {
+    display: inline-block;
+    margin-top: 12px;
+  }
+}
+
 .sanji-module-page {
   min-height: 100vh;
   background: #fafafa;

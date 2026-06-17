@@ -1,0 +1,335 @@
+[
+  {
+    "slug": "junchen-qinghui",
+    "name": "君臣庆会",
+    "meta": "大吉 · 左辅",
+    "searchText": "君臣庆会 紫微 左辅 右弼 上格 大吉",
+    "level": "上格",
+    "group": "excellent",
+    "groupLabel": "上格"
+  },
+  {
+    "slug": "zifu-tonggong",
+    "name": "紫府同宫格",
+    "meta": "大吉 · 天府",
+    "searchText": "紫府同宫格 紫微 天府 上格 大吉",
+    "level": "上格",
+    "group": "excellent",
+    "groupLabel": "上格"
+  },
+  {
+    "slug": "fuxiang-chaoyuan",
+    "name": "府相朝垣",
+    "meta": "大吉 · 天相",
+    "searchText": "府相朝垣 天府 天相 上格 大吉",
+    "level": "上格",
+    "group": "excellent",
+    "groupLabel": "上格"
+  },
+  {
+    "slug": "yangliang-changlu",
+    "name": "阳梁昌禄",
+    "meta": "大吉 · 天梁",
+    "searchText": "阳梁昌禄 太阳 天梁 文昌 禄存 上格 大吉",
+    "level": "上格",
+    "group": "excellent",
+    "groupLabel": "上格"
+  },
+  {
+    "slug": "huotan-ge",
+    "name": "火贪格",
+    "meta": "大吉 · 火星",
+    "searchText": "火贪格 贪狼 火星 上格 大吉",
+    "level": "上格",
+    "group": "excellent",
+    "groupLabel": "上格"
+  },
+  {
+    "slug": "lingtan-ge",
+    "name": "铃贪格",
+    "meta": "大吉 · 铃星",
+    "searchText": "铃贪格 贪狼 铃星 上格 大吉",
+    "level": "上格",
+    "group": "excellent",
+    "groupLabel": "上格"
+  },
+  {
+    "slug": "wutan-ge",
+    "name": "武贪格",
+    "meta": "大吉 · 贪狼",
+    "searchText": "武贪格 武曲 贪狼 上格 大吉",
+    "level": "上格",
+    "group": "excellent",
+    "groupLabel": "上格"
+  },
+  {
+    "slug": "shapolang",
+    "name": "杀破狼",
+    "meta": "吉 · 破军",
+    "searchText": "杀破狼 七杀 破军 贪狼 上格 吉",
+    "level": "上格",
+    "group": "excellent",
+    "groupLabel": "上格"
+  },
+  {
+    "slug": "jiyue-tongliang",
+    "name": "机月同梁",
+    "meta": "大吉 · 太阴",
+    "searchText": "机月同梁 天机 太阴 天同 天梁 上格 大吉",
+    "level": "上格",
+    "group": "excellent",
+    "groupLabel": "上格"
+  },
+  {
+    "slug": "lianzhen-tianxiang",
+    "name": "廉贞天相格",
+    "meta": "吉 · 天相",
+    "searchText": "廉贞天相格 廉贞 天相 中格 吉",
+    "level": "中格",
+    "group": "good",
+    "groupLabel": "中格"
+  },
+  {
+    "slug": "wuqu-qisha",
+    "name": "武曲七杀",
+    "meta": "吉 · 七杀",
+    "searchText": "武曲七杀 武曲 七杀 中格 吉",
+    "level": "中格",
+    "group": "good",
+    "groupLabel": "中格"
+  },
+  {
+    "slug": "tiantong-tianliang",
+    "name": "天同天梁格",
+    "meta": "吉 · 天梁",
+    "searchText": "天同天梁格 天同 天梁 中格 吉",
+    "level": "中格",
+    "group": "good",
+    "groupLabel": "中格"
+  },
+  {
+    "slug": "riyue-tonggong",
+    "name": "日月同宫",
+    "meta": "吉 · 太阴",
+    "searchText": "日月同宫 太阳 太阴 中格 吉",
+    "level": "中格",
+    "group": "good",
+    "groupLabel": "中格"
+  },
+  {
+    "slug": "riyue-jiaming",
+    "name": "日月夹命",
+    "meta": "大吉 · 太阴",
+    "searchText": "日月夹命 太阳 太阴 中格 大吉",
+    "level": "中格",
+    "group": "good",
+    "groupLabel": "中格"
+  },
+  {
+    "slug": "juri-tonggong",
+    "name": "巨日同宫",
+    "meta": "吉 · 太阳",
+    "searchText": "巨日同宫 巨门 太阳 中格 吉",
+    "level": "中格",
+    "group": "good",
+    "groupLabel": "中格"
+  },
+  {
+    "slug": "shizhong-yinyu",
+    "name": "石中隐玉",
+    "meta": "吉 · 中格",
+    "searchText": "石中隐玉 巨门 中格 吉",
+    "level": "中格",
+    "group": "good",
+    "groupLabel": "中格"
+  },
+  {
+    "slug": "mingzhu-chuhai",
+    "name": "明珠出海",
+    "meta": "大吉 · 太阴",
+    "searchText": "明珠出海 太阳 太阴 中格 大吉",
+    "level": "中格",
+    "group": "good",
+    "groupLabel": "中格"
+  },
+  {
+    "slug": "ziwei-ruming",
+    "name": "紫微入命",
+    "meta": "吉 · 中格",
+    "searchText": "紫微入命 紫微 中格 吉",
+    "level": "中格",
+    "group": "good",
+    "groupLabel": "中格"
+  },
+  {
+    "slug": "fubi-jiaming",
+    "name": "辅弼夹命",
+    "meta": "大吉 · 右弼",
+    "searchText": "辅弼夹命 左辅 右弼 助力格 大吉",
+    "level": "助力格",
+    "group": "support",
+    "groupLabel": "助力格"
+  },
+  {
+    "slug": "changqu-jiaming",
+    "name": "昌曲夹命",
+    "meta": "大吉 · 文曲",
+    "searchText": "昌曲夹命 文昌 文曲 助力格 大吉",
+    "level": "助力格",
+    "group": "support",
+    "groupLabel": "助力格"
+  },
+  {
+    "slug": "kuiyue-jiaming",
+    "name": "魁钺夹命",
+    "meta": "吉 · 天钺",
+    "searchText": "魁钺夹命 天魁 天钺 助力格 吉",
+    "level": "助力格",
+    "group": "support",
+    "groupLabel": "助力格"
+  },
+  {
+    "slug": "shuanglu-chaoyuan",
+    "name": "双禄朝垣",
+    "meta": "大吉 · 禄存",
+    "searchText": "双禄朝垣 化禄 禄存 助力格 大吉",
+    "level": "助力格",
+    "group": "support",
+    "groupLabel": "助力格"
+  },
+  {
+    "slug": "sanqi-jiahui",
+    "name": "三奇加会",
+    "meta": "大吉 · 化权",
+    "searchText": "三奇加会 化禄 化权 化科 助力格 大吉",
+    "level": "助力格",
+    "group": "support",
+    "groupLabel": "助力格"
+  },
+  {
+    "slug": "hualu-ruming",
+    "name": "化禄入命",
+    "meta": "吉 · 助力格",
+    "searchText": "化禄入命 化禄 助力格 吉",
+    "level": "助力格",
+    "group": "support",
+    "groupLabel": "助力格"
+  },
+  {
+    "slug": "yangtuo-jiaji",
+    "name": "羊陀夹忌",
+    "meta": "凶 · 陀罗",
+    "searchText": "羊陀夹忌 擎羊 陀罗 化忌 恶格 凶",
+    "level": "恶格",
+    "group": "caution",
+    "groupLabel": "恶格"
+  },
+  {
+    "slug": "huoling-jiaming",
+    "name": "火铃夹命",
+    "meta": "凶 · 铃星",
+    "searchText": "火铃夹命 火星 铃星 恶格 凶",
+    "level": "恶格",
+    "group": "caution",
+    "groupLabel": "恶格"
+  },
+  {
+    "slug": "kongjie-jiaming",
+    "name": "空劫夹命",
+    "meta": "凶 · 地劫",
+    "searchText": "空劫夹命 地空 地劫 恶格 凶",
+    "level": "恶格",
+    "group": "caution",
+    "groupLabel": "恶格"
+  },
+  {
+    "slug": "liansha-yang",
+    "name": "廉杀羊",
+    "meta": "凶 · 七杀",
+    "searchText": "廉杀羊 廉贞 七杀 擎羊 恶格 凶",
+    "level": "恶格",
+    "group": "caution",
+    "groupLabel": "恶格"
+  },
+  {
+    "slug": "juhuo-yang",
+    "name": "巨火羊",
+    "meta": "凶 · 火星",
+    "searchText": "巨火羊 巨门 火星 擎羊 恶格 凶",
+    "level": "恶格",
+    "group": "caution",
+    "groupLabel": "恶格"
+  },
+  {
+    "slug": "lingchang-tuowu",
+    "name": "铃昌陀武",
+    "meta": "凶 · 文昌",
+    "searchText": "铃昌陀武 铃星 文昌 陀罗 武曲 恶格 凶",
+    "level": "恶格",
+    "group": "caution",
+    "groupLabel": "恶格"
+  },
+  {
+    "slug": "matou-daijian",
+    "name": "马头带箭",
+    "meta": "凶 · 恶格",
+    "searchText": "马头带箭 擎羊 恶格 凶",
+    "level": "恶格",
+    "group": "caution",
+    "groupLabel": "恶格"
+  },
+  {
+    "slug": "lucun-shouming",
+    "name": "禄存守命",
+    "meta": "吉 · 基础格局",
+    "searchText": "禄存守命 禄存 基础格局 吉",
+    "level": "基础格局",
+    "group": "basic",
+    "groupLabel": "基础格局"
+  },
+  {
+    "slug": "tianma-ruming",
+    "name": "天马入命",
+    "meta": "平 · 基础格局",
+    "searchText": "天马入命 天马 基础格局 平",
+    "level": "基础格局",
+    "group": "basic",
+    "groupLabel": "基础格局"
+  },
+  {
+    "slug": "changqu-tonghui",
+    "name": "昌曲同会",
+    "meta": "吉 · 文曲",
+    "searchText": "昌曲同会 文昌 文曲 基础格局 吉",
+    "level": "基础格局",
+    "group": "basic",
+    "groupLabel": "基础格局"
+  },
+  {
+    "slug": "fubi-tonghui",
+    "name": "辅弼同会",
+    "meta": "吉 · 右弼",
+    "searchText": "辅弼同会 左辅 右弼 基础格局 吉",
+    "level": "基础格局",
+    "group": "basic",
+    "groupLabel": "基础格局"
+  },
+  {
+    "slug": "kuiyue-tonghui",
+    "name": "魁钺同会",
+    "meta": "吉 · 天钺",
+    "searchText": "魁钺同会 天魁 天钺 基础格局 吉",
+    "level": "基础格局",
+    "group": "basic",
+    "groupLabel": "基础格局"
+  },
+  {
+    "slug": "kequan-shuanghui",
+    "name": "科权双会",
+    "meta": "吉 · 化权",
+    "searchText": "科权双会 化科 化权 基础格局 吉",
+    "level": "基础格局",
+    "group": "basic",
+    "groupLabel": "基础格局"
+  }
+]
