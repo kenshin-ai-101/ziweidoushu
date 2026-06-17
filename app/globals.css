@@ -10,23 +10,23 @@
 
   /* 背景层级 */
   --bg-0: #fafafa;
-  --bg-1: #F4F3EF;
-  --bg-2: #ECEAE4;
+  --bg-1: #f5f5f5;
+  --bg-2: #ebebeb;
   --bg-inv: #0D0D0B;
 
   /* 文字层级 */
   --tx-0: #0D0D0B;
   --tx-1: #1A1A18;
   --tx-2: #4A4A45;
-  --tx-3: #8A8A82;
+  --tx-3: #6E6E66;
   --tx-inv: #F0EDE8;
   --tx-inv2: rgba(240,237,232,0.65);
 
-  /* 唯一强调色：墨金 */
-  --ac:     #B8922A;
-  --ac-dim: #7A5F1A;
-  --ac-bg:  rgba(184,146,42,0.07);
-  --ac-bdr: rgba(184,146,42,0.22);
+  /* 强调色 */
+  --ac:     #000000;
+  --ac-dim: #333333;
+  --ac-bg:  rgba(0,0,0,0.04);
+  --ac-bdr: rgba(0,0,0,0.18);
 
   /* 四化语义色（仅用于命盘数据，不用于UI装饰） */
   --lu:   #2D7A4A;
@@ -2151,8 +2151,76 @@ body:has(.oracle-subpage) {
 .glass-static:hover {
   border-color: rgba(0, 0, 0, 0.4) !important;
 }
-.knowledge-anchor {
+.knowledge-anchor,
+.knowledge-hash-anchor {
   scroll-margin-top: 96px;
+}
+
+/* 知识库页 — 与生产站 light 主题对齐（黑强调色 + 冷灰底） */
+.knowledge-page {
+  --ac: #000000;
+  --ac-dim: #333333;
+  --ac-bg: rgba(0, 0, 0, 0.04);
+  --ac-bdr: rgba(0, 0, 0, 0.18);
+  --tx-3: #6e6e66;
+  --bg-1: #f5f5f5;
+  --bg-2: #ebebeb;
+  font-family: Inter, 'Helvetica Neue', Arial, 'PingFang SC', sans-serif;
+}
+.knowledge-page .knowledge-hero-input:focus {
+  border-color: rgba(0, 0, 0, 0.35);
+}
+.knowledge-page .knowledge-footer {
+  width: 100%;
+  margin-top: 80px;
+  padding: clamp(14px, 2vw, 24px) clamp(16px, 3vw, 32px);
+}
+.knowledge-page .knowledge-footer-links {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: clamp(8px, 1.5vw, 14px);
+  color: #6b6b6b;
+  font-size: 11px;
+}
+.knowledge-page .knowledge-footer-links a {
+  color: #6b6b6b;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.knowledge-page .knowledge-footer-links a:hover {
+  color: #333;
+}
+.knowledge-page .knowledge-footer-links span {
+  color: #ddd;
+}
+.knowledge-page .knowledge-footer-bottom {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #f0f0f0;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.75;
+  color: #6b6b6b;
+}
+.knowledge-page .knowledge-footer-bottom p {
+  margin: 0;
+}
+.knowledge-page .knowledge-footer-bottom p + p {
+  margin-top: 6px;
+}
+.knowledge-page .knowledge-footer-bottom a {
+  color: #6b6b6b;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.knowledge-page .knowledge-footer-bottom a:hover {
+  color: #333;
+}
+.knowledge-page .knowledge-footer-bottom span {
+  margin: 0 6px;
+  color: #ddd;
 }
 
 @media (max-width: 720px) {

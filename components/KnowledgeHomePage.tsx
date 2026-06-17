@@ -50,50 +50,105 @@ function cardStyle(hidden: boolean): React.CSSProperties {
   };
 }
 
+function SectionEyebrow({ label }: { label: string }) {
+  return (
+    <div className="flex items-center justify-center gap-3 mb-3">
+      <div style={{ height: '1px', width: '40px', background: 'linear-gradient(to right, transparent, rgba(0,0,0,0.4))' }} />
+      <span style={{ fontSize: '14px', color: 'var(--ac)', letterSpacing: '0.4em' }}>{label}</span>
+      <div style={{ height: '1px', width: '40px', background: 'linear-gradient(to left, transparent, rgba(0,0,0,0.4))' }} />
+    </div>
+  );
+}
+
 function MetisHeader() {
   return (
-    <header className="metis-library-header">
-      <Link className="metis-library-logo" aria-label="回到首页" href="/">
-        METIS
+    <header
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        padding: 'clamp(14px, 2vw, 24px) clamp(16px, 3vw, 32px)',
+        pointerEvents: 'none',
+      }}
+    >
+      <Link
+        aria-label="回到首页"
+        href="/"
+        style={{
+          pointerEvents: 'auto',
+          cursor: 'pointer',
+          textDecoration: 'none',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 'clamp(26px, 3vw, 42px)',
+            fontWeight: 900,
+            letterSpacing: '-0.02em',
+            lineHeight: 1,
+            color: '#000',
+            fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
+          }}
+        >
+          METIS
+        </div>
       </Link>
-      <nav className="metis-library-nav" aria-label="主导航">
-        <Link
-          className="obys-pill-link"
-          style={{
-            fontSize: 'clamp(11px, 1.1vw, 13px)',
-            padding: 'clamp(3px, 0.4vw, 4px) clamp(6px, 1vw, 10px)',
-          }}
-          href="/chart"
-        >
-          起盘
-        </Link>
-        <span style={{ color: '#d4d4d4', fontSize: 'var(--fs-10)' }}>·</span>
-        <Link
-          className="obys-pill-link"
-          style={{
-            fontSize: 'clamp(11px, 1.1vw, 13px)',
-            padding: 'clamp(3px, 0.4vw, 4px) clamp(6px, 1vw, 10px)',
-          }}
-          href="/heming"
-        >
-          合盘
-        </Link>
-        <button
-          type="button"
-          className="obys-btn obys-btn--primary"
-          style={{
-            fontSize: 'clamp(11px, 1.1vw, 13px)',
-            padding: 'clamp(4px, 0.5vw, 5px) clamp(10px, 1.2vw, 14px)',
-            marginLeft: 'clamp(4px, 0.6vw, 8px)',
-            background: '#fff',
-            color: '#1a1a1a',
-            borderColor: 'rgba(0,0,0,0.28)',
-            fontWeight: 500,
-          }}
-        >
-          普通版
-        </button>
-      </nav>
+
+      <div
+        style={{
+          pointerEvents: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: 10,
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(2px, 0.4vw, 6px)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 'clamp(2px, 0.4vw, 6px)' }}>
+            <Link
+              className="obys-pill-link"
+              style={{ fontSize: 'clamp(11px, 1.1vw, 13px)', padding: 'clamp(3px, 0.4vw, 4px) clamp(6px, 1vw, 10px)' }}
+              href="/chart"
+            >
+              起盘
+            </Link>
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 'clamp(2px, 0.4vw, 6px)' }}>
+            <span style={{ color: '#d4d4d4', fontSize: 'var(--fs-10)' }}>·</span>
+            <Link
+              className="obys-pill-link"
+              style={{ fontSize: 'clamp(11px, 1.1vw, 13px)', padding: 'clamp(3px, 0.4vw, 4px) clamp(6px, 1vw, 10px)' }}
+              href="/heming"
+            >
+              合盘
+            </Link>
+          </span>
+          <button
+            type="button"
+            className="obys-btn obys-btn--primary"
+            style={{
+              fontSize: 'clamp(11px, 1.1vw, 13px)',
+              padding: 'clamp(4px, 0.5vw, 5px) clamp(10px, 1.2vw, 14px)',
+              marginLeft: 'clamp(4px, 0.6vw, 8px)',
+              background: '#fff',
+              color: '#1a1a1a',
+              borderColor: 'rgba(0,0,0,0.28)',
+              fontWeight: 500,
+            }}
+          >
+            普通版
+          </button>
+        </div>
+      </div>
     </header>
   );
 }
@@ -147,7 +202,7 @@ export default function KnowledgeHomePage() {
           justifyContent: 'center',
         }}
       >
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
           <div
             style={{
               position: 'absolute',
@@ -157,6 +212,7 @@ export default function KnowledgeHomePage() {
               backgroundPosition: 'center',
               opacity: 0.85,
               filter: 'grayscale(1)',
+              transition: 'opacity 0.6s ease',
             }}
           />
           <div
@@ -170,7 +226,7 @@ export default function KnowledgeHomePage() {
         </div>
 
         <div style={{ position: 'relative', zIndex: 1, width: '100%' }}>
-          <div className="text-center px-6 py-14">
+          <div className="text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
               <div style={{ height: '1px', width: '48px', background: 'linear-gradient(to right, transparent, rgba(0,0,0,0.4))' }} />
               <span style={{ fontSize: '14px', color: 'var(--ac)', letterSpacing: '0.4em' }}>KNOWLEDGE BASE</span>
@@ -241,6 +297,7 @@ export default function KnowledgeHomePage() {
                     fontFamily: 'inherit',
                     letterSpacing: '0.05em',
                     boxSizing: 'border-box',
+                    transition: 'border-color 0.2s',
                   }}
                 />
               </div>
@@ -263,7 +320,7 @@ export default function KnowledgeHomePage() {
                 data-search-item="true"
                 data-search-text={searchText}
                 href={`/knowledge/${STAR_TO_SLUG[star]}/overview`}
-                className="knowledge-card glass-static hover:border-black/40"
+                className="glass-static hover:border-black/40"
                 style={{
                   ...cardStyle(hidden),
                   padding: '14px 10px',
@@ -332,13 +389,9 @@ export default function KnowledgeHomePage() {
           })}
         </div>
 
-        <div id="dual-star" className="mt-20" style={{ scrollMarginTop: '96px' }}>
+        <div id="dual-star" className="mt-20 knowledge-hash-anchor">
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-3 mb-3">
-              <div style={{ height: '1px', width: '40px', background: 'linear-gradient(to right, transparent, rgba(0,0,0,0.4))' }} />
-              <span style={{ fontSize: '14px', color: 'var(--ac)', letterSpacing: '0.4em' }}>DUAL STAR COMBOS</span>
-              <div style={{ height: '1px', width: '40px', background: 'linear-gradient(to left, transparent, rgba(0,0,0,0.4))' }} />
-            </div>
+            <SectionEyebrow label="DUAL STAR COMBOS" />
             <h2 style={{ fontSize: 'clamp(22px, 3vw, 32px)', fontWeight: 700, color: 'var(--tx-0)', letterSpacing: '0.12em', marginBottom: '8px' }}>
               双星同宫组合
             </h2>
@@ -377,8 +430,9 @@ export default function KnowledgeHomePage() {
           </div>
         </div>
 
-        <section id="patterns" className="knowledge-anchor" style={{ marginTop: '72px', scrollMarginTop: '96px' }}>
-          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+        <div id="patterns" className="mt-20 knowledge-hash-anchor">
+          <div className="text-center mb-8">
+            <SectionEyebrow label="PATTERNS & FORMATIONS" />
             <h2 style={{ fontSize: 'clamp(22px, 3vw, 32px)', fontWeight: 700, color: 'var(--tx-0)', letterSpacing: '0.12em', marginBottom: '8px' }}>
               古典格局详解
             </h2>
@@ -420,7 +474,7 @@ export default function KnowledgeHomePage() {
                         data-search-item="true"
                         data-search-text={item.searchText}
                         href={`/knowledge/pattern/${item.slug}`}
-                        className="knowledge-card glass-static hover:border-black/40"
+                        className="glass-static hover:border-black/40"
                         style={{
                           ...cardStyle(hidden),
                           padding: '12px 10px',
@@ -429,6 +483,7 @@ export default function KnowledgeHomePage() {
                           borderRadius: '10px',
                           textDecoration: 'none',
                           textAlign: 'center',
+                          transition: 'all 0.2s',
                         }}
                       >
                         <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--tx-0)', letterSpacing: '0.08em' }}>{item.name}</div>
@@ -440,7 +495,7 @@ export default function KnowledgeHomePage() {
               </div>
             );
           })}
-        </section>
+        </div>
       </div>
 
       <OracleFooter showBackLink={false} />
