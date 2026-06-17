@@ -87,4 +87,6 @@ export interface ZiweiChart {
   daXians: DaXian[];
   currentAge: number;
   currentDaXianIndex: number;
+  /** 生产 chart 页 chartToken，用于 /api/analysis 校验 */
+  _chartToken?: string;
 }

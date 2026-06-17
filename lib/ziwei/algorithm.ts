@@ -7,6 +7,7 @@ import { astro } from 'iztro';
 import { Solar } from 'lunar-javascript';
 import type { BirthInfo, LunarInfo, Star, Palace, DaXian, DaXianSiHua, ZiweiChart } from './types';
 import { BRANCHES, STEMS } from './constants';
+import { computeChartToken } from './chart-token';
 // 飞星派工具仅供导出，不再在排盘时调用（倪师《天纪 03》：四化星永远固定不动）
 // import { detectSelfSihua, getSiHuaByStem } from './sihua';
 
@@ -165,7 +166,7 @@ export function generateChart(birthInfo: BirthInfo): ZiweiChart {
   // ── 农历信息 ──
   const lunarInfo = getLunarInfo(year, month, day);
 
-  return {
+  const chartBase = {
     birthInfo,
     lunarInfo,
     mingGongBranch: mingGongBranch >= 0 ? mingGongBranch : 0,
@@ -177,5 +178,10 @@ export function generateChart(birthInfo: BirthInfo): ZiweiChart {
     daXians,
     currentAge,
     currentDaXianIndex,
+  };
+
+  return {
+    ...chartBase,
+    _chartToken: computeChartToken(chartBase),
   };
 }

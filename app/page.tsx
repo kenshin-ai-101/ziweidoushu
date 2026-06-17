@@ -206,7 +206,8 @@ export default function HomePage() {
             <Link className="oracle-pill-link" href="/chart">起盘</Link>
             <span>·</span>
             <Link className="oracle-pill-link" href="/heming">合盘</Link>
-            <button className="oracle-pro" type="button">专业版</button>
+            <button className="oracle-pill-link" type="button">登录</button>
+            <button className="oracle-pro" type="button">普通版</button>
           </div>
         </div>
       </header>

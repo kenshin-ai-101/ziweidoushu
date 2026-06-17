@@ -1,10 +1,9 @@
 'use client';
 import { useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import BirthForm, { type BirthFormState } from '@/components/BirthForm';
 import { formToBirthInfo } from '@/lib/ziwei/share';
 import type { BirthInfo, ZiweiChart } from '@/lib/ziwei/types';
-import { useTheme } from '@/components/ThemeProvider';
 
 // ─── AiContent 渲染器（与 InsightPanel 一致）────────────────
 function AiContent({ text, streaming }: { text: string; streaming?: boolean }) {
@@ -47,10 +46,6 @@ function AiContent({ text, streaming }: { text: string; streaming?: boolean }) {
 }
 
 export default function HemingPage() {
-  const router = useRouter();
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
-
   // ─── 双方命盘状态 ─────────────────────────────────────────
   const [chartA, setChartA] = useState<ZiweiChart | null>(null);
   const [chartB, setChartB] = useState<ZiweiChart | null>(null);
@@ -150,55 +145,94 @@ export default function HemingPage() {
   }, [chartA, chartB, formA, formB, generateChart]);
 
   const cardStyle = {
-    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.9)',
-    border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(200,160,60,0.2)'}`,
+    background: 'linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.8) 100%)',
+    border: '0.5px solid rgba(0,0,0,0.2)',
     borderRadius: '16px',
     padding: '24px',
+    backdropFilter: 'blur(28px) saturate(190%) brightness(1.08)',
+    WebkitBackdropFilter: 'blur(28px) saturate(190%) brightness(1.08)',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(255,255,255,0.1)',
   };
 
   const labelStyle = {
-    fontSize: '10px', letterSpacing: '0.4em', color: 'var(--ac)', opacity: 0.7,
+    fontSize: '14px', letterSpacing: '0.4em', color: '#666',
     marginBottom: '16px', display: 'block',
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-0)' }}>
+    <div style={{ minHeight: '100vh', background: '#fafafa', color: '#000' }}>
       {/* 顶栏 */}
       <header style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: isDark ? 'rgba(2,8,16,0.88)' : 'rgba(250,245,235,0.92)',
-        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid var(--bdr)',
-        display: 'flex', alignItems: 'center', padding: '0 24px', height: '52px', gap: '16px',
-      }}>
-        <button
-          onClick={() => router.push('/')}
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+        padding: 'clamp(14px, 2vw, 24px) clamp(16px, 3vw, 32px)',
+        pointerEvents: 'none',
+      }} className="heming-obys-header">
+        <Link
+          href="/"
+          aria-label="回到首页"
           style={{
-            display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px',
-            color: 'var(--tx-3)', background: 'none', border: 'none', cursor: 'pointer',
+            pointerEvents: 'auto', cursor: 'pointer', textDecoration: 'none',
+            position: 'relative', zIndex: 1,
           }}
         >
-          <span style={{ fontSize: '16px' }}>‹</span>
-          <span>返回</span>
-        </button>
-        <div style={{ width: '1px', height: '20px', background: 'var(--bdr-med)' }} />
-        <span style={{ fontSize: '12px', color: 'var(--ac)', letterSpacing: '0.2em' }}>合盘分析</span>
-        <div style={{ flex: 1 }} />
-        <span style={{ fontSize: '11px', color: 'var(--tx-3)' }}>感情 · 合伙 · 亲子 · 朋友</span>
+          <div style={{
+            fontSize: 'clamp(26px, 3vw, 42px)', fontWeight: 900,
+            letterSpacing: '-0.02em', lineHeight: 1, color: '#000',
+            fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
+          }}>METIS</div>
+        </Link>
+        <div style={{
+          pointerEvents: 'auto', display: 'flex', flexDirection: 'column',
+          alignItems: 'flex-end', gap: '10px', position: 'relative', zIndex: 1,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(2px, 0.4vw, 6px)' }}>
+            <span className="heming-nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(2px, 0.4vw, 6px)' }}>
+              <Link className="heming-pill-link" href="/chart">起盘</Link>
+            </span>
+            <span className="heming-nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(2px, 0.4vw, 6px)' }}>
+              <span style={{ color: '#d4d4d4', fontSize: '10px' }}>·</span>
+              <Link className="heming-pill-link" href="/heming">合盘</Link>
+            </span>
+            <button type="button" className="heming-obys-btn">普通版</button>
+            <button aria-label="打开菜单" aria-expanded="false" className="heming-nav-burger">☰</button>
+          </div>
+        </div>
       </header>
+
+      <div style={{
+        background: '#fff', borderBottom: '1px solid #e8e8e8',
+        display: 'flex', alignItems: 'center',
+        padding: 'clamp(100px, 14vh, 140px) 24px 0', gap: '16px',
+      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', flexWrap: 'wrap',
+          padding: '12px 0', width: '100%', maxWidth: '1200px',
+          margin: '0 auto', gap: '16px',
+        }}>
+          <span style={{ fontSize: '14px', color: '#6b6b6b', letterSpacing: '0.3em', textTransform: 'uppercase' }}>
+            03 / SYNASTRY · 合盘分析
+          </span>
+          <div style={{ flex: 1 }} />
+          <span style={{ fontSize: '14px', color: '#6b6b6b' }}>感情 · 合伙 · 亲子 · 朋友</span>
+        </div>
+      </div>
 
       {/* 主体 */}
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px 80px' }}>
 
         {/* 标题 */}
-        <div style={{ textAlign: 'center', marginBottom: '36px' }}>
-          <div style={{ fontSize: '28px', color: 'var(--ac)', opacity: 0.15, marginBottom: '12px' }}>☯</div>
-          <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '0.15em', color: 'var(--tx-0)', marginBottom: '8px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '48px', paddingTop: '24px' }}>
+          <div style={{ fontSize: '14px', letterSpacing: '0.3em', color: '#6b6b6b', marginBottom: '14px', textTransform: 'uppercase' }}>
+            03 / SYNASTRY
+          </div>
+          <h1 style={{ fontSize: 'clamp(36px, 6vw, 64px)', fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1, color: '#000', marginBottom: '12px' }}>
             紫微合盘
           </h1>
-          <p style={{ fontSize: '13px', color: 'var(--tx-3)', lineHeight: 1.6 }}>
+          <p style={{ fontSize: '14px', color: '#666', lineHeight: 1.7, maxWidth: '540px', margin: '12px auto 0' }}>
             输入两个人的出生信息，AI 基于倪海夏体系分析双方命盘的缘分匹配度、感情走向与相处建议
           </p>
+          <div style={{ height: '1px', background: '#000', marginTop: '32px', maxWidth: '540px', marginLeft: 'auto', marginRight: 'auto' }} />
         </div>
 
         {/* 双栏表单 */}
@@ -209,6 +243,7 @@ export default function HemingPage() {
             <span style={labelStyle}>甲方 — A</span>
             <BirthForm
               hideSubmit
+              appearance="light"
               onSubmit={() => {}}
               onFormSave={setFormA}
             />
@@ -219,6 +254,7 @@ export default function HemingPage() {
             <span style={labelStyle}>乙方 — B</span>
             <BirthForm
               hideSubmit
+              appearance="light"
               onSubmit={() => {}}
               onFormSave={setFormB}
             />
@@ -237,24 +273,31 @@ export default function HemingPage() {
           {/* 区块标题 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: (analysis || analyzing) ? '20px' : '24px' }}>
             <span style={{ color: 'var(--ac)', opacity: 0.6 }}>◉</span>
-            <span style={{ fontSize: '11px', letterSpacing: '0.3em', color: 'var(--tx-3)' }}>合盘分析 · HEMING</span>
+            <span style={{ fontSize: '14px', letterSpacing: '0.3em', color: 'var(--tx-3)' }}>合盘分析 · HEMING</span>
+            <span style={{ flex: 1 }} />
+            <span title="合盘每日免费 1 次，北京时间 0 点重置" style={{
+              fontSize: '14px', color: 'var(--tx-3)', background: 'rgba(0,0,0,0.06)',
+              border: '0.5px solid rgba(0,0,0,0.20)', padding: '2px 8px',
+              borderRadius: 'var(--r-pill)', letterSpacing: '0.04em',
+            }}>今日额度…</span>
           </div>
 
           {/* 状态分支 */}
           {!analysis && !analyzing && (
             <div style={{ textAlign: 'center', padding: '32px 0' }}>
-              <div style={{ fontSize: '13px', color: 'var(--tx-3)', marginBottom: '24px', lineHeight: 1.7 }}>
+              <div style={{ fontSize: '14px', color: 'var(--tx-3)', marginBottom: '24px', lineHeight: 1.7 }}>
                 填好双方出生信息后，点击下方按钮<br />
                 AI 将基于倪海夏体系深度分析两人缘分匹配度
               </div>
               <button
                 onClick={() => runAnalysis()}
+                className="liquid-btn"
                 style={{
-                  padding: '14px 40px', borderRadius: 'var(--r-pill)', border: 'none',
-                  background: 'linear-gradient(135deg, #9a6210, #c88020)',
-                  color: '#fff8e8', fontSize: '14px', fontWeight: 600,
+                  padding: '14px 40px', borderRadius: 'var(--r-pill)', border: '0.5px solid rgba(0,0,0,0.4)',
+                  background: 'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.85) 100%)',
+                  color: '#fff', fontSize: '14px', fontWeight: 600,
                   letterSpacing: '0.15em', cursor: 'pointer',
-                  boxShadow: '0 4px 16px rgba(140,100,20,0.25)',
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(255,255,255,0.1)',
                   transition: 'transform 0.15s',
                 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; }}
@@ -359,8 +402,45 @@ export default function HemingPage() {
       </div>
 
       <style>{`
+        .heming-pill-link {
+          color: #000;
+          text-decoration: none;
+          border-radius: 999px;
+          font-size: clamp(11px, 1.1vw, 13px);
+          padding: clamp(3px, 0.4vw, 4px) clamp(6px, 1vw, 10px);
+          line-height: 1.2;
+          transition: background 0.18s ease;
+        }
+        .heming-pill-link:hover { background: rgba(0,0,0,0.06); }
+        .heming-obys-btn {
+          font-size: clamp(11px, 1.1vw, 13px);
+          padding: clamp(4px, 0.5vw, 5px) clamp(10px, 1.2vw, 14px);
+          margin-left: clamp(4px, 0.6vw, 8px);
+          border-radius: 999px;
+          background: #fff;
+          color: #1a1a1a;
+          border: 1px solid rgba(0,0,0,0.28);
+          font-weight: 500;
+          cursor: pointer;
+          line-height: 1.2;
+        }
+        .heming-nav-burger {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #000;
+          font-size: 20px;
+          line-height: 1;
+          padding: 4px 2px 4px 8px;
+        }
+        .liquid-btn:hover { transform: translateY(-1px); }
         @media (max-width: 680px) {
           .heming-grid { grid-template-columns: 1fr !important; }
+          .heming-nav-desktop { display: none !important; }
+          .heming-nav-burger { display: inline-flex; }
         }
       `}</style>
     </div>

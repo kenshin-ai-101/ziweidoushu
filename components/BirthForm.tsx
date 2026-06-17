@@ -5,6 +5,7 @@ import type { BirthInfo } from '@/lib/ziwei/types';
 import { SHICHEN } from '@/lib/ziwei/constants';
 import { useTheme } from '@/components/ThemeProvider';
 import { PROVINCES } from '@/lib/ziwei/cities';
+import { formToBirthInfo, isValidLunarDate } from '@/lib/ziwei/share';
 
 export interface BirthFormState {
   name: string;
@@ -18,6 +19,10 @@ export interface BirthFormState {
   city: string;
   longitude: number;
   gender: 'male' | 'female';
+  /** 公历 / 农历输入模式 */
+  calendarType?: 'solar' | 'lunar';
+  /** 农历闰月（仅 calendarType=lunar 时有效） */
+  isLeapMonth?: boolean;
 }
 
 interface BirthFormProps {
@@ -27,6 +32,8 @@ interface BirthFormProps {
   onFormSave?: (data: BirthFormState) => void;
   /** 隐藏内部「立即起盘」按钮（合盘等场景由父级统一触发） */
   hideSubmit?: boolean;
+  /** Oracle 子页固定浅色表单，避免与全局 dark 主题 SSR 不一致 */
+  appearance?: 'auto' | 'light';
 }
 
 const SHICHEN_NAMES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
@@ -47,9 +54,9 @@ function isValidDate(y: number, m: number, d: number): boolean {
   return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
 }
 
-export default function BirthForm({ onSubmit, loading, initialData, onFormSave, hideSubmit }: BirthFormProps) {
+export default function BirthForm({ onSubmit, loading, initialData, onFormSave, hideSubmit, appearance = 'auto' }: BirthFormProps) {
   const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const isDark = appearance === 'light' ? false : theme === 'dark';
 
   const [form, setForm] = useState<BirthFormState>({
     name: initialData?.name ?? '',
@@ -63,10 +70,13 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
     city: initialData?.city ?? '',
     longitude: initialData?.longitude ?? 120,
     gender: initialData?.gender ?? 'male',
+    calendarType: initialData?.calendarType ?? 'solar',
+    isLeapMonth: initialData?.isLeapMonth ?? false,
   });
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const isOracle = appearance === 'light';
 
   // 表单状态变化时实时同步给父级（合盘等场景下父级靠这个收集双方数据）
   useEffect(() => {
@@ -102,7 +112,9 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
       : '',
     month: !form.month ? '请选择月份' : '',
     day: !form.day ? '请选择日期'
-      : form.year && form.month && !isValidDate(y, m, d) ? `${m}月没有${d}日`
+      : form.year && form.month && form.calendarType === 'lunar' && !isValidLunarDate(y, m, d, form.isLeapMonth)
+        ? `农历${form.isLeapMonth ? '闰' : ''}${m}月没有${d}日`
+      : form.year && form.month && form.calendarType !== 'lunar' && !isValidDate(y, m, d) ? `${m}月没有${d}日`
       : '',
   };
   const hasError = Object.values(errors).some(Boolean);
@@ -144,8 +156,10 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
     setSubmitAttempted(true);
     setTouched({ year: true, month: true, day: true });
     if (hasError) return;
-    onFormSave?.({ ...form });
-    onSubmit({ year: y, month: m, day: d, hour: branch, gender: form.gender, name: form.name || undefined, province: form.province || undefined, city: form.city || undefined, longitude: form.province ? form.longitude : undefined });
+
+    const payload = { ...form };
+    onFormSave?.(payload);
+    onSubmit(formToBirthInfo(payload));
   };
 
   // ─── 样式变量 ────────────────────────────────────────────
@@ -202,19 +216,57 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
 
   return (
     <motion.form
+      className={isOracle ? 'birth-form--oracle' : undefined}
       onSubmit={handleSubmit}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      style={{ background: bg, border: `1px solid ${border}`, borderRadius: '24px', padding: '28px', backdropFilter: 'blur(20px)' }}
+      style={isOracle ? undefined : { background: bg, border: `1px solid ${border}`, borderRadius: '24px', padding: '28px', backdropFilter: 'blur(20px)' }}
     >
       {/* 标题 */}
-      <h3 style={{ color: goldText, fontSize: '12px', letterSpacing: '0.4em', textAlign: 'center', marginBottom: '20px', fontWeight: 500 }}>
+      <h3 style={isOracle ? undefined : { color: goldText, fontSize: '12px', letterSpacing: '0.4em', textAlign: 'center', marginBottom: '12px', fontWeight: 500 }}>
         ── 输入生辰八字 ──
       </h3>
 
+      {/* 公历 / 农历（非 Oracle 子页居中展示） */}
+      {!isOracle && (
+        <>
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', justifyContent: 'center' }}>
+            {(['solar', 'lunar'] as const).map(type => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setForm(f => ({ ...f, calendarType: type }))}
+                style={{
+                  padding: '6px 14px',
+                  fontSize: '11px',
+                  borderRadius: '999px',
+                  border: `1px solid ${form.calendarType === type ? focusBorder : inputBorder}`,
+                  background: form.calendarType === type ? (isDark ? 'rgba(212,168,67,0.15)' : 'rgba(212,168,67,0.12)') : 'transparent',
+                  color: form.calendarType === type ? goldText : labelClr,
+                  cursor: 'pointer',
+                }}
+              >
+                {type === 'solar' ? '公历' : '农历'}
+              </button>
+            ))}
+          </div>
+
+          {form.calendarType === 'lunar' && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', fontSize: '11px', color: labelClr, justifyContent: 'center' }}>
+              <input
+                type="checkbox"
+                checked={form.isLeapMonth ?? false}
+                onChange={e => setForm(f => ({ ...f, isLeapMonth: e.target.checked }))}
+              />
+              闰月
+            </label>
+          )}
+        </>
+      )}
+
       {/* ── 进度条 ── */}
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '20px' }}>
+      <div className={isOracle ? 'birth-form-progress' : undefined} style={isOracle ? undefined : { display: 'flex', gap: '4px', marginBottom: '20px' }}>
         {steps.map((done, i) => (
           <motion.div
             key={i}
@@ -227,21 +279,55 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
 
       {/* ── 姓名 ── */}
       <div style={{ marginBottom: '16px' }}>
-        <label style={{ display: 'block', fontSize: '11px', color: labelClr, marginBottom: '6px', letterSpacing: '0.05em' }}>姓名（可选）</label>
+        <label className={isOracle ? 'birth-form-label' : undefined} style={isOracle ? undefined : { display: 'block', fontSize: '11px', color: labelClr, marginBottom: '6px', letterSpacing: '0.05em' }}>姓名（可选）</label>
         <input
           type="text"
           placeholder="请输入姓名"
           value={form.name}
           onChange={e => setForm({ ...form, name: e.target.value })}
-          style={inputStyle}
-          onFocus={e => { e.target.style.borderColor = focusBorder; }}
-          onBlur={e => { e.target.style.borderColor = inputBorder; }}
+          style={isOracle ? undefined : inputStyle}
+          onFocus={isOracle ? undefined : e => { e.target.style.borderColor = focusBorder; }}
+          onBlur={isOracle ? undefined : e => { e.target.style.borderColor = inputBorder; }}
         />
       </div>
 
       {/* ── 出生日期 ── */}
       <div style={{ marginBottom: '16px' }}>
-        <label style={{ display: 'block', fontSize: '11px', color: labelClr, marginBottom: '6px', letterSpacing: '0.05em' }}>出生日期（公历）</label>
+        {isOracle ? (
+          <>
+            <div className="birth-form-date-row">
+              <label className="birth-form-label">
+                出生日期（{form.calendarType === 'lunar' ? '农历' : '公历'}）
+              </label>
+              <div className="birth-form-calendar-toggle">
+                {(['solar', 'lunar'] as const).map(type => (
+                  <button
+                    key={type}
+                    type="button"
+                    className={form.calendarType === type ? 'is-active' : undefined}
+                    onClick={() => setForm(f => ({ ...f, calendarType: type }))}
+                  >
+                    {type === 'solar' ? '公历' : '农历'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {form.calendarType === 'lunar' && (
+              <label className="birth-form-leap-toggle">
+                <input
+                  type="checkbox"
+                  checked={form.isLeapMonth ?? false}
+                  onChange={e => setForm(f => ({ ...f, isLeapMonth: e.target.checked }))}
+                />
+                闰月
+              </label>
+            )}
+          </>
+        ) : (
+          <label style={{ display: 'block', fontSize: '11px', color: labelClr, marginBottom: '6px', letterSpacing: '0.05em' }}>
+            出生日期（{form.calendarType === 'lunar' ? '农历' : '公历'}）
+          </label>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
           <div>
             <select
@@ -290,63 +376,119 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
 
       {/* ── 出生地点 ── */}
       <div style={{ marginBottom: '16px' }}>
-        <label style={{ display: 'block', fontSize: '11px', color: labelClr, marginBottom: '6px', letterSpacing: '0.05em' }}>出生地点（用于真太阳时校正）</label>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-          <select
-            value={form.province}
-            onChange={e => handleProvince(e.target.value)}
-            style={inputStyle}
-            onFocus={e => { e.target.style.borderColor = focusBorder; }}
-            onBlur={e => { e.target.style.borderColor = inputBorder; }}
-          >
-            <option value="">省份 / 直辖市</option>
-            {PROVINCES.map(p => (
-              <option key={p.name} value={p.name}>{p.name}</option>
-            ))}
-          </select>
-          <select
-            value={form.city}
-            onChange={e => handleCity(e.target.value)}
-            disabled={!form.province}
-            style={{ ...inputStyle, opacity: form.province ? 1 : 0.45 }}
-            onFocus={e => { e.target.style.borderColor = focusBorder; }}
-            onBlur={e => { e.target.style.borderColor = inputBorder; }}
-          >
-            <option value="">{form.province ? '城市' : '先选省份'}</option>
-            {cityList.map(c => (
-              <option key={c.name} value={c.name}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-        <AnimatePresence mode="wait">
-          {form.province ? (
-            <motion.p
-              key="location-info"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              style={{ fontSize: '10px', color: isDark ? 'rgba(180,210,235,0.85)' : 'rgba(100,70,10,0.5)', marginTop: '5px' }}
-            >
-              {form.city || '（请选择城市）'} · 经度 {form.longitude.toFixed(1)}°E · 时差 {offsetMin > 0 ? '+' : ''}{offsetMin} 分钟
-            </motion.p>
-          ) : (
-            <motion.p
-              key="location-hint"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              style={{ fontSize: '10px', color: isDark ? 'rgba(165,185,210,0.7)' : 'rgba(140,100,20,0.45)', marginTop: '5px' }}
-            >
-              * 倪海夏批命用真太阳时，建议填写出生地以自动校正时辰
-            </motion.p>
-          )}
-        </AnimatePresence>
+        {isOracle ? (
+          <>
+            <label className="birth-form-label">出生地点（用于真太阳时校正）</label>
+            <div className="birth-form-location-selects">
+              <select
+                value={form.province}
+                onChange={e => handleProvince(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="">省份 / 直辖市</option>
+                {PROVINCES.map(p => (
+                  <option key={p.name} value={p.name}>{p.name}</option>
+                ))}
+              </select>
+              <select
+                value={form.city}
+                onChange={e => handleCity(e.target.value)}
+                disabled={!form.province}
+                style={{ ...inputStyle, opacity: form.province ? 1 : 0.45 }}
+              >
+                <option value="">{form.province ? '城市' : '先选省份'}</option>
+                {cityList.map(c => (
+                  <option key={c.name} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <AnimatePresence mode="wait">
+              {form.province ? (
+                <motion.p
+                  key="location-info"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="birth-form-location-meta"
+                >
+                  {form.city || '（请选择城市）'} · 经度 {form.longitude.toFixed(1)}°E · 时差 {offsetMin > 0 ? '+' : ''}{offsetMin} 分钟
+                </motion.p>
+              ) : (
+                <motion.p
+                  key="location-hint"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="birth-form-location-meta"
+                >
+                  * 倪海夏批命用真太阳时，建议填写出生地以自动校正时辰
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </>
+        ) : (
+          <>
+            <label style={{ display: 'block', fontSize: '11px', color: labelClr, marginBottom: '6px', letterSpacing: '0.05em' }}>出生地点（用于真太阳时校正）</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <select
+                value={form.province}
+                onChange={e => handleProvince(e.target.value)}
+                style={inputStyle}
+                onFocus={e => { e.target.style.borderColor = focusBorder; }}
+                onBlur={e => { e.target.style.borderColor = inputBorder; }}
+              >
+                <option value="">省份 / 直辖市</option>
+                {PROVINCES.map(p => (
+                  <option key={p.name} value={p.name}>{p.name}</option>
+                ))}
+              </select>
+              <select
+                value={form.city}
+                onChange={e => handleCity(e.target.value)}
+                disabled={!form.province}
+                style={{ ...inputStyle, opacity: form.province ? 1 : 0.45 }}
+                onFocus={e => { e.target.style.borderColor = focusBorder; }}
+                onBlur={e => { e.target.style.borderColor = inputBorder; }}
+              >
+                <option value="">{form.province ? '城市' : '先选省份'}</option>
+                {cityList.map(c => (
+                  <option key={c.name} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <AnimatePresence mode="wait">
+              {form.province ? (
+                <motion.p
+                  key="location-info"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  style={{ fontSize: '10px', color: isDark ? 'rgba(180,210,235,0.85)' : 'rgba(100,70,10,0.5)', marginTop: '5px' }}
+                >
+                  {form.city || '（请选择城市）'} · 经度 {form.longitude.toFixed(1)}°E · 时差 {offsetMin > 0 ? '+' : ''}{offsetMin} 分钟
+                </motion.p>
+              ) : (
+                <motion.p
+                  key="location-hint"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  style={{ fontSize: '10px', color: isDark ? 'rgba(165,185,210,0.7)' : 'rgba(140,100,20,0.45)', marginTop: '5px' }}
+                >
+                  * 倪海夏批命用真太阳时，建议填写出生地以自动校正时辰
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </>
+        )}
       </div>
 
       {/* ── 出生时间 ── */}
       <div style={{ marginBottom: '16px' }}>
         <label style={{ display: 'block', fontSize: '11px', color: labelClr, marginBottom: '6px', letterSpacing: '0.05em' }}>出生时间（北京时间）</label>
-        <div style={{ borderRadius: '14px', padding: '12px', background: panelBg, border: `1px solid ${panelBorder}`, opacity: form.unknownTime ? 0.45 : 1, pointerEvents: form.unknownTime ? 'none' : 'auto', transition: 'opacity 0.2s' }}>
+        <div style={{ borderRadius: '14px', padding: '12px', background: panelBg, border: `1px solid ${panelBorder}`, opacity: form.unknownTime ? 0.45 : 1, pointerEvents: form.unknownTime ? 'none' : 'auto', transition: 'opacity 0.2s' }}
+          className={isOracle ? 'birth-form-time-panel' : undefined}
+        >
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
             <select
               value={form.clockHour}
@@ -396,7 +538,7 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
       {/* ── 性别 ── */}
       <div style={{ marginBottom: '20px' }}>
         <label style={{ display: 'block', fontSize: '11px', color: labelClr, marginBottom: '6px', letterSpacing: '0.05em' }}>性别</label>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div className={isOracle ? 'birth-form-gender' : undefined} style={isOracle ? { display: 'flex', gap: '10px' } : { display: 'flex', gap: '10px' }}>
           {(['male', 'female'] as const).map(g => {
             const active = form.gender === g;
             const isMale = g === 'male';
@@ -428,6 +570,7 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
       </div>
 
       {/* ── 确认信息 Summary Chip ── */}
+      {!isOracle && (
       <AnimatePresence>
         {showSummary && (
           <motion.div
@@ -436,7 +579,13 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
             exit={{ opacity: 0, y: -8, height: 0, marginBottom: 0 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
           >
-            <div style={{
+            <div className={isOracle ? 'birth-form-summary' : undefined} style={isOracle ? {
+              borderRadius: '12px',
+              padding: '9px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            } : {
               background: summaryBg,
               border: `1px solid ${summaryBorder}`,
               borderRadius: '12px',
@@ -453,9 +602,15 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
           </motion.div>
         )}
       </AnimatePresence>
+      )}
 
       {/* ── 提交按钮 ── */}
-      {!hideSubmit && <motion.button
+      {!hideSubmit && (isOracle ? (
+        <button type="submit" className="birth-form-submit" disabled={loading}>
+          {loading ? '紫微起盘中…' : '立即起盘 · 查看命盘解析'}
+        </button>
+      ) : (
+      <motion.button
         type="submit"
         disabled={loading}
         whileHover={loading ? {} : { scale: 1.01 }}
@@ -489,7 +644,8 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
             紫微起盘中…
           </span>
         ) : '立即起盘 · 解命运密码'}
-      </motion.button>}
+      </motion.button>
+      ))}
     </motion.form>
   );
 }

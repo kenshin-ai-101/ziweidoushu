@@ -60,5 +60,28 @@ export function useHistory() {
     });
   }, []);
 
-  return { history, save, remove };
+  /** 尝试同步云端（生产 /api/history/charts）；失败则仅本地 */
+  const syncCloud = useCallback(async (form: BirthFormState) => {
+    try {
+      await fetch('/api/history/charts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ form, savedAt: Date.now() }),
+      });
+    } catch { /* 离线或未登录 */ }
+  }, []);
+
+  const fetchCloud = useCallback(async (): Promise<HistoryEntry[]> => {
+    try {
+      const res = await fetch('/api/history/charts');
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (data.loggedIn && Array.isArray(data.charts)) {
+        return data.charts as HistoryEntry[];
+      }
+    } catch { /* ignore */ }
+    return [];
+  }, []);
+
+  return { history, save, remove, syncCloud, fetchCloud };
 }

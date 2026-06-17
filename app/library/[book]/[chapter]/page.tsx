@@ -6,6 +6,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ALL_BOOKS, getChapter } from '@/lib/classics';
 
+type ChapterSearchParams = {
+  pro?: string;
+  mockPro?: string;
+  access?: string;
+};
+
 export async function generateStaticParams() {
   return ALL_BOOKS.flatMap(b =>
     b.chapters.map((_, i) => ({ book: b.slug, chapter: String(i) }))
@@ -14,7 +20,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ book: string; chapter: string }> }) {
   const { book: bookSlug, chapter: chIdx } = await params;
-  const result = getChapter(bookSlug, parseInt(chIdx));
+  const result = getChapter(bookSlug, parseInt(chIdx, 10));
   if (!result) return {};
   return {
     title: `${result.chapter.title} · 《${result.book.title}》· 紫微斗数古籍`,
@@ -22,157 +28,178 @@ export async function generateMetadata({ params }: { params: Promise<{ book: str
   };
 }
 
-export default async function ChapterPage({ params }: { params: Promise<{ book: string; chapter: string }> }) {
+function hasMockProAccess(searchParams: ChapterSearchParams) {
+  const value = searchParams.pro ?? searchParams.mockPro ?? searchParams.access;
+  return value === '1' || value === 'true' || value === 'pro';
+}
+
+function MetisHeader() {
+  return (
+    <header className="metis-library-header">
+      <Link className="metis-library-logo" aria-label="回到首页" href="/">METIS</Link>
+      <nav className="metis-library-nav" aria-label="主导航">
+        <Link className="obys-pill-link" style={{ fontSize: 'clamp(11px, 1.1vw, 13px)', padding: 'clamp(3px, 0.4vw, 4px) clamp(6px, 1vw, 10px)' }} href="/chart">起盘</Link>
+        <span style={{ color: '#d4d4d4', fontSize: 'var(--fs-10)' }}>·</span>
+        <Link className="obys-pill-link" style={{ fontSize: 'clamp(11px, 1.1vw, 13px)', padding: 'clamp(3px, 0.4vw, 4px) clamp(6px, 1vw, 10px)' }} href="/heming">合盘</Link>
+        <button type="button" className="obys-btn obys-btn--primary" style={{ fontSize: 'clamp(11px, 1.1vw, 13px)', padding: 'clamp(4px, 0.5vw, 5px) clamp(10px, 1.2vw, 14px)', marginLeft: 'clamp(4px, 0.6vw, 8px)', background: '#fff', color: '#1a1a1a', borderColor: 'rgba(0,0,0,0.28)', fontWeight: 500 }}>
+          普通版
+        </button>
+      </nav>
+    </header>
+  );
+}
+
+function LockedChapterPage({ bookSlug, chapterIdx }: { bookSlug: string; chapterIdx: number }) {
+  const redirect = `/library/${bookSlug}/${chapterIdx}`;
+
+  return (
+    <div id="main-content">
+      <div className="metis-library-page">
+        <MetisHeader />
+        <div style={{ maxWidth: 580, margin: '0 auto', padding: 'clamp(120px,18vh,200px) 24px 100px', textAlign: 'center' }}>
+          <div
+            style={{
+              width: 60,
+              height: 60,
+              margin: '0 auto 24px',
+              borderRadius: '50%',
+              border: '1.5px solid #000',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+          <div style={{ fontSize: 12, letterSpacing: '0.3em', color: '#6b6b6b', marginBottom: 14 }}>
+            PROFESSIONAL ONLY
+          </div>
+          <h1 style={{ fontSize: 'clamp(25px,4vw,36px)', fontWeight: 800, color: '#000', margin: '0 0 18px', letterSpacing: '0.02em' }}>
+            古籍原典库 · 专业版专属
+          </h1>
+          <p style={{ fontSize: 15, color: '#555', lineHeight: 2, marginBottom: 34 }}>
+            六部古籍全文、四层精解（白话直译 · 义理阐发 · 实占应用 · 融会贯通）、
+            <br />
+            倪师批注与逐段 AI 解读，均为专业版研读内容。
+            <br />
+            开通专业版，即可解锁全部古籍原典的系统研习。
+          </p>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link
+              href={`/subscription?redirect=${encodeURIComponent(redirect)}`}
+              style={{
+                padding: '13px 34px',
+                borderRadius: 26,
+                background: '#000',
+                color: '#fff',
+                fontSize: 15,
+                fontWeight: 600,
+                textDecoration: 'none',
+                letterSpacing: '0.04em',
+              }}
+            >
+              解锁专业版 →
+            </Link>
+            <Link
+              href="/"
+              style={{
+                padding: '13px 34px',
+                borderRadius: 26,
+                border: '1px solid #ccc',
+                color: '#333',
+                fontSize: 15,
+                textDecoration: 'none',
+                letterSpacing: '0.04em',
+              }}
+            >
+              返回首页
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default async function ChapterPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ book: string; chapter: string }>;
+  searchParams?: Promise<ChapterSearchParams>;
+}) {
   const { book: bookSlug, chapter: chIdx } = await params;
-  const result = getChapter(bookSlug, parseInt(chIdx));
+  const chapterIdx = parseInt(chIdx, 10);
+  const query = await searchParams;
+  const result = getChapter(bookSlug, chapterIdx);
   if (!result) notFound();
 
-  const { book, chapter, chapterIdx } = result;
+  if (!hasMockProAccess(query ?? {})) {
+    return <LockedChapterPage bookSlug={bookSlug} chapterIdx={chapterIdx} />;
+  }
+
+  const { book, chapter } = result;
   const prevIdx = chapterIdx - 1;
   const nextIdx = chapterIdx + 1;
 
   return (
-    <div style={{ background: 'var(--bg-page)', minHeight: '100vh' }}>
-      <div className="px-6 py-4 flex items-center justify-between"
-        style={{ borderBottom: '1px solid rgba(184,146,42,0.15)', background: 'var(--bg-page)' }}>
-        <Link href={`/library/${book.slug}`} style={{ fontSize: '12px', color: 'var(--ac)', letterSpacing: '0.3em', textDecoration: 'none' }}>
-          ← 《{book.title}》目录
-        </Link>
-        <div style={{ fontSize: '12px', color: 'var(--tx-3)', letterSpacing: '0.15em' }}>
-          {chapter.title}
-        </div>
-        <Link href="/library" style={{ fontSize: '12px', color: 'var(--ac)', letterSpacing: '0.2em', textDecoration: 'none' }}>
-          古籍库 →
-        </Link>
-      </div>
-
-      <article className="max-w-3xl mx-auto px-6 py-12">
-        {/* 标题 */}
-        <div className="text-center mb-10">
-          <div style={{ fontSize: '11px', color: 'var(--tx-3)', letterSpacing: '0.25em', marginBottom: '8px' }}>
-            《{book.title}》· {book.dynasty}
+    <div className="metis-library-page">
+      <MetisHeader />
+      <main className="metis-library-main">
+        <section className="metis-library-hero">
+          <div className="metis-library-eyebrow">CLASSICS · READING</div>
+          <h1 className="metis-library-chapter-title">{chapter.title}</h1>
+          {chapter.subtitle && <p className="metis-library-desc">{chapter.subtitle}</p>}
+          <div className="metis-library-meta-row">
+            <Link className="metis-library-chip" href={`/library/${book.slug}?pro=1`}>← 《{book.title}》目录</Link>
+            <span className="metis-library-chip">{book.dynasty}</span>
+            <span className="metis-library-chip">{String(chapterIdx + 1).padStart(2, '0')} / {book.chapters.length}</span>
+            <span className="metis-library-chip">MOCK PRO · 已临时解锁</span>
           </div>
-          <h1 style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 700, color: 'var(--tx-0)', letterSpacing: '0.15em', marginBottom: '8px' }}>
-            {chapter.title}
-          </h1>
-          {chapter.subtitle && (
-            <div style={{ fontSize: '13px', color: 'var(--tx-2)', letterSpacing: '0.1em' }}>
-              {chapter.subtitle}
-            </div>
-          )}
-        </div>
+          <div className="metis-library-divider" aria-hidden="true" />
+        </section>
 
-        {/* 段落 */}
-        <div style={{ background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid rgba(184,146,42,0.2)', padding: '32px 28px' }}>
-          {chapter.paragraphs.map((p, i) => (
-            <div
-              key={p.id}
-              id={p.id}
-              style={{
-                marginBottom: i === chapter.paragraphs.length - 1 ? 0 : '20px',
-                paddingBottom: i === chapter.paragraphs.length - 1 ? 0 : '20px',
-                borderBottom: i === chapter.paragraphs.length - 1 ? 'none' : '1px dashed rgba(184,146,42,0.15)',
-                scrollMarginTop: '80px',
-              }}
-            >
-              <div style={{
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: '12px',
-              }}>
-                <span style={{
-                  fontSize: '11px',
-                  color: 'var(--ac)',
-                  fontWeight: 600,
-                  letterSpacing: '0.1em',
-                  minWidth: '24px',
-                }}>
-                  {String(p.idx).padStart(2, '0')}
-                </span>
-                <p style={{
-                  flex: 1,
-                  fontSize: '16px',
-                  color: 'var(--tx-0)',
-                  lineHeight: 2,
-                  letterSpacing: '0.04em',
-                  fontFamily: '"PingFang SC", "Hiragino Sans GB", serif',
-                }}>
-                  {p.text}
-                </p>
+        <article className="metis-reading-card">
+          {chapter.paragraphs.map((p) => (
+            <section key={p.id} id={p.id} className="metis-paragraph">
+              <span className="metis-library-index">{String(p.idx).padStart(2, '0')}</span>
+              <div>
+                <p className="metis-paragraph-text">{p.text}</p>
+                {p.translation && (
+                  <div className="metis-annotation">
+                    <span>白话</span>
+                    {p.translation}
+                  </div>
+                )}
+                {p.niNote && (
+                  <div className="metis-annotation">
+                    <span>倪师注</span>
+                    {p.niNote}
+                  </div>
+                )}
               </div>
-              {p.translation && (
-                <div style={{
-                  marginTop: '8px',
-                  marginLeft: '36px',
-                  padding: '8px 12px',
-                  background: 'rgba(184,146,42,0.05)',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  color: 'var(--tx-2)',
-                  lineHeight: 1.8,
-                }}>
-                  <span style={{ fontSize: '10px', color: 'var(--ac)', marginRight: '6px' }}>白话</span>
-                  {p.translation}
-                </div>
-              )}
-              {p.niNote && (
-                <div style={{
-                  marginTop: '8px',
-                  marginLeft: '36px',
-                  padding: '8px 12px',
-                  background: 'rgba(196,90,45,0.05)',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  color: 'var(--tx-2)',
-                  lineHeight: 1.8,
-                }}>
-                  <span style={{ fontSize: '10px', color: 'var(--ji)', marginRight: '6px' }}>倪师注</span>
-                  {p.niNote}
-                </div>
-              )}
-            </div>
+            </section>
           ))}
-        </div>
+        </article>
 
-        {/* 章节导航 */}
-        <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+        <nav className="metis-chapter-nav" aria-label="章节导航">
           {prevIdx >= 0 ? (
-            <Link
-              href={`/library/${book.slug}/${prevIdx}`}
-              style={{
-                flex: 1,
-                padding: '14px 18px',
-                background: 'var(--bg-card)',
-                border: '1px solid rgba(184,146,42,0.2)',
-                borderRadius: '10px',
-                textDecoration: 'none',
-                color: 'var(--tx-0)',
-              }}
-            >
-              <div style={{ fontSize: '10px', color: 'var(--tx-3)', letterSpacing: '0.2em', marginBottom: '2px' }}>← 上一章</div>
-              <div style={{ fontSize: '13px', fontWeight: 500 }}>{book.chapters[prevIdx].title}</div>
+            <Link href={`/library/${book.slug}/${prevIdx}?pro=1`}>
+              <span>← 上一章</span>
+              <strong>{book.chapters[prevIdx].title}</strong>
             </Link>
-          ) : <div style={{ flex: 1 }} />}
+          ) : <div className="metis-chapter-nav-placeholder" />}
           {nextIdx < book.chapters.length ? (
-            <Link
-              href={`/library/${book.slug}/${nextIdx}`}
-              style={{
-                flex: 1,
-                padding: '14px 18px',
-                background: 'var(--bg-card)',
-                border: '1px solid rgba(184,146,42,0.2)',
-                borderRadius: '10px',
-                textDecoration: 'none',
-                color: 'var(--tx-0)',
-                textAlign: 'right',
-              }}
-            >
-              <div style={{ fontSize: '10px', color: 'var(--tx-3)', letterSpacing: '0.2em', marginBottom: '2px' }}>下一章 →</div>
-              <div style={{ fontSize: '13px', fontWeight: 500 }}>{book.chapters[nextIdx].title}</div>
+            <Link href={`/library/${book.slug}/${nextIdx}?pro=1`}>
+              <span>下一章 →</span>
+              <strong>{book.chapters[nextIdx].title}</strong>
             </Link>
-          ) : <div style={{ flex: 1 }} />}
-        </div>
-      </article>
+          ) : <div className="metis-chapter-nav-placeholder" />}
+        </nav>
+      </main>
     </div>
   );
 }

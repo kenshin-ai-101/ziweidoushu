@@ -10,6 +10,7 @@ export const metadata = {
 };
 
 export default function Page() {
+  const productionOrder = ['ziwei', 'yijing', 'kanyu', 'tuiming', 'mianxiang', 'tianxiang', 'cezi', 'liuren'];
   const modules: NiModule[] = [
     ...TIANJI_MODULES,
     {
@@ -44,24 +45,28 @@ export default function Page() {
       slug: 'liuren',
       chapters: [],
     },
-  ].sort((a, b) => a.order - b.order);
+  ].sort((a, b) => productionOrder.indexOf(a.slug) - productionOrder.indexOf(b.slug));
 
   return (
     <SanjiPage
       category="tianji"
       modules={modules}
-      intro="上知天文 — 紫微斗数命理体系、易经卦象、堪舆理论与传统术数方法论。"
       statLine={`8 大学科 · 67 个章节 · ${TIANJI_STATS.totalHexagrams} 卦详解 · ${TIANJI_STATS.recordYear}年录制 · ${TIANJI_STATS.videoEpisodes}集共${TIANJI_STATS.videoHours}小时`}
       sectionTitle="八大学科"
       sectionSubtitle="Tian Ji · 8 Disciplines"
-      quote="倪师不立门派，紫微取三合派之简明、易经取象数派之直观、堪舆取九星派之实用。大道至简，后天努力一定能大于先天命运。"
+      quote={(
+        <>
+          倪师不立门派，紫微取<strong>三合派</strong>之简明、易经取<strong>象数派</strong>之直观、堪舆取<strong>九星派</strong>之实用——大道至简，<strong>2/3 大于 1/3</strong>，后天努力一定能大于先天命运。
+        </>
+      )}
       quoteFrom="命宫是人的北极星——所有的分析都要围绕它来展开。"
+      quoteSource="紫微斗数总论"
     >
       <div className="oracle-inline-links">
         <div className="oracle-sanity-nav">
-          {ALL_BOOKS.slice(0, 3).map(book => (
+          {ALL_BOOKS.map(book => (
             <Link key={book.slug} href={`/library/${book.slug}`}>
-              《{book.title}》<span>{book.chapters.length} 章 →</span>
+              《{book.title}》 {book.chapters.length} 章 →
             </Link>
           ))}
         </div>

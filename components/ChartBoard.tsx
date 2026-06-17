@@ -4,10 +4,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { ZiweiChart, Palace, Star } from '@/lib/ziwei/types';
 import { BRANCHES, STEMS } from '@/lib/ziwei/constants';
 import PalaceCell from './PalaceCell';
-import TimeNav, { type TimeView, getYearStemIndex, buildSiHuaOverlay } from './TimeNav';
+import TimeNav, { type TimeView } from './TimeNav';
+import { buildTimeOverlay, getTimeOverlayLabel } from '@/lib/ziwei/sihua';
 
 interface ChartBoardProps {
   chart: ZiweiChart;
+  timeView?: TimeView;
+  liunianYear?: number;
+  liuyueMonth?: number;
+  liuriDay?: number;
+  liushiHour?: number;
+  onTimeViewChange?: (view: TimeView) => void;
+  onYearChange?: (year: number) => void;
+  onMonthChange?: (month: number) => void;
+  onDayChange?: (day: number) => void;
+  onHourChange?: (hour: number) => void;
   onStarSelect?: (star: Star, palace: Palace) => void;
   onPalaceSelect?: (palace: Palace) => void;
   onSiHuaClick?: (starName: string, siHua: string, view: TimeView) => void;
@@ -52,27 +63,74 @@ function getSanFangSiZheng(branch: number): [number, number, number, number] {
 
 const ANIMATION_ORDER = [5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4];
 
-export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHuaClick }: ChartBoardProps) {
+function getCurrentShichenBranch(): number {
+  const hour = new Date().getHours();
+  if (hour === 23 || hour === 0) return 0;
+  return Math.floor((hour + 1) / 2) % 12;
+}
+
+export default function ChartBoard({
+  chart,
+  timeView: timeViewProp,
+  liunianYear: liunianYearProp,
+  liuyueMonth: liuyueMonthProp,
+  liuriDay: liuriDayProp,
+  liushiHour: liushiHourProp,
+  onTimeViewChange,
+  onYearChange,
+  onMonthChange,
+  onDayChange,
+  onHourChange,
+  onStarSelect,
+  onPalaceSelect,
+  onSiHuaClick,
+}: ChartBoardProps) {
   const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
-  const [timeView, setTimeView] = useState<TimeView>('mingpan');
-  const [liunianYear, setLiunianYear] = useState<number>(new Date().getFullYear());
+  const [timeViewInternal, setTimeViewInternal] = useState<TimeView>('mingpan');
+  const [liunianYearInternal, setLiunianYearInternal] = useState<number>(new Date().getFullYear());
+  const [liuyueMonthInternal, setLiuyueMonthInternal] = useState<number>(new Date().getMonth() + 1);
+  const [liuriDayInternal, setLiuriDayInternal] = useState<number>(new Date().getDate());
+  const [liushiHourInternal, setLiushiHourInternal] = useState<number>(getCurrentShichenBranch);
+
+  const timeView = timeViewProp ?? timeViewInternal;
+  const liunianYear = liunianYearProp ?? liunianYearInternal;
+  const liuyueMonth = liuyueMonthProp ?? liuyueMonthInternal;
+  const liuriDay = liuriDayProp ?? liuriDayInternal;
+  const liushiHour = liushiHourProp ?? liushiHourInternal;
+
+  const setTimeView = (v: TimeView) => {
+    onTimeViewChange?.(v);
+    if (timeViewProp === undefined) setTimeViewInternal(v);
+  };
+  const setLiunianYear = (y: number) => {
+    onYearChange?.(y);
+    if (liunianYearProp === undefined) setLiunianYearInternal(y);
+  };
+  const setLiuyueMonth = (m: number) => {
+    onMonthChange?.(m);
+    if (liuyueMonthProp === undefined) setLiuyueMonthInternal(m);
+  };
+  const setLiuriDay = (d: number) => {
+    onDayChange?.(d);
+    if (liuriDayProp === undefined) setLiuriDayInternal(d);
+  };
+  const setLiushiHour = (h: number) => {
+    onHourChange?.(h);
+    if (liushiHourProp === undefined) setLiushiHourInternal(h);
+  };
 
   const palaceMap: Record<number, Palace> = {};
   chart.palaces.forEach(p => { palaceMap[p.branch] = p; });
 
-  // 计算当前叠加四化数据（大限或流年）
-  const currentDx = chart.daXians[chart.currentDaXianIndex];
-  const overlayData: Record<string, string> = (() => {
-    if (timeView === 'daxian' && currentDx) {
-      const dxPalace = chart.palaces.find(p => p.branch === currentDx.palaceBranch);
-      if (dxPalace) return buildSiHuaOverlay(dxPalace.stem);
-    }
-    if (timeView === 'liunian') {
-      return buildSiHuaOverlay(getYearStemIndex(liunianYear));
-    }
-    return {};
-  })();
-  const overlayLabel = timeView === 'daxian' ? '限' : timeView === 'liunian' ? '年' : undefined;
+  const overlayData = buildTimeOverlay({
+    view: timeView,
+    chart,
+    liunianYear,
+    liuyueMonth,
+    liuriDay,
+    liushiHour,
+  });
+  const overlayLabel = getTimeOverlayLabel(timeView);
 
   const handlePalaceClick = (branch: number) => {
     const isDeselecting = selectedBranch === branch;
@@ -94,8 +152,14 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
         chart={chart}
         view={timeView}
         liunianYear={liunianYear}
+        liuyueMonth={liuyueMonth}
+        liuriDay={liuriDay}
+        liushiHour={liushiHour}
         onViewChange={setTimeView}
         onYearChange={setLiunianYear}
+        onMonthChange={setLiuyueMonth}
+        onDayChange={setLiuriDay}
+        onHourChange={setLiushiHour}
       />
 
       {/* 命盘标题 */}

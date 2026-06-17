@@ -1,24 +1,14 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { OracleFooter } from '@/components/OracleFooter';
 import BirthForm from '@/components/BirthForm';
-import ChartBoard from '@/components/ChartBoard';
-import InsightPanel from '@/components/InsightPanel';
 import type { NiModule, SanJiCategory } from '@/lib/nihai';
 import { SANJI_CATEGORIES } from '@/lib/nihai';
-import { generateChart } from '@/lib/ziwei/algorithm';
-import type { Palace, ZiweiChart } from '@/lib/ziwei/types';
 
 type ShellTone = 'gold' | 'green' | 'violet' | 'ink';
-
-const toneColor: Record<ShellTone, string> = {
-  gold: '#b8922a',
-  green: '#5f7f55',
-  violet: '#7d6694',
-  ink: '#111111',
-};
 
 const productionChapterLabels: Record<string, Record<string, string>> = {
   tianji: {
@@ -52,9 +42,9 @@ const productionCardCopy: Record<string, Record<string, { pre?: string; subtitle
     kanyu: { subtitle: '风水堪舆理论与空间营造原理研读\n九星派 · 杨救贫流派' },
     tuiming: { subtitle: '数字学与易学理论的传统应用研究\n河洛数理派 · 子平法' },
     mianxiang: { subtitle: '面相学特征识别与传统人文学原理\n五形论 · 命相同参' },
-    tianxiang: { subtitle: '天文现象与古代历法体系研究' },
-    cezi: { subtitle: '字理文化与汉字形义的学问研读' },
-    liuren: { subtitle: '六壬学传统应用的知识体系' },
+    tianxiang: { subtitle: '天文现象与古代历法体系研究\n28宿七政 · 观天识变' },
+    cezi: { subtitle: '字理文化与汉字形义的学问研读\n拆字法 · 会意法' },
+    liuren: { subtitle: '六壬学传统应用的知识体系\n掐指速算 · 心血来潮即断' },
   },
   diji: {
     geography: { subtitle: '以风水读懂一国的命运' },
@@ -69,6 +59,25 @@ const productionCardCopy: Record<string, Record<string, { pre?: string; subtitle
     jingui: { pre: '第 5 课', subtitle: '杂病诊治 · 实战集大成' },
   },
 };
+
+function moduleSceneSrc(category: SanJiCategory, slug: string) {
+  return `/images/scenes/${category}/${slug}.webp`;
+}
+
+function getModuleCardCopy(category: SanJiCategory, module: NiModule) {
+  const copy = productionCardCopy[category]?.[module.slug];
+  const raw = copy?.subtitle ?? module.subtitle;
+  const [line1, line2FromCopy] = raw.split('\n');
+  const line2 = line2FromCopy ?? (
+    copy?.subtitle && !copy.subtitle.includes('\n') && module.subtitle !== line1
+      ? module.subtitle
+      : undefined
+  );
+  const chapter = productionChapterLabels[category]?.[module.slug]
+    ?? `${module.chapters.length} 章节${module.school ? ` · ${module.school}` : ' · 进入学科 →'}`;
+
+  return { pre: copy?.pre, line1, line2, chapter };
+}
 
 export function OracleChrome({
   children,
@@ -89,45 +98,61 @@ export function OracleChrome({
   }, []);
 
   return (
-    <main className={`oracle-subpage oracle-subpage--${tone} ${compact ? 'oracle-subpage--compact' : ''} ${variant ? `oracle-subpage--${variant}` : ''}`}>
-      <header className="oracle-subpage-header">
-        <Link className="oracle-subpage-logo" href="/">ORACLE{variant === 'terms' ? '®' : ''}</Link>
-        <nav className="oracle-subpage-actions" aria-label="主导航">
-          <Link href="/chart">起盘</Link>
-          <span>·</span>
-          <Link href="/heming">合盘</Link>
-          <button type="button">专业版</button>
-        </nav>
-      </header>
-      {children}
-      <OracleFooter showBackLink={variant !== 'chart'} />
-    </main>
+    <>
+      <a href="#main-content" className="oracle-skip-link">跳转到主要内容</a>
+      <main className={`oracle-subpage oracle-subpage--${tone} ${compact ? 'oracle-subpage--compact' : ''} ${variant ? `oracle-subpage--${variant}` : ''}`}>
+        <header className="oracle-subpage-header">
+          <Link className="oracle-subpage-logo" href="/" aria-label="回到首页">
+            {variant === 'terms' ? 'ORACLE®' : 'METIS'}
+          </Link>
+          <div className="oracle-subpage-actions-wrap">
+            <nav className="oracle-subpage-actions" aria-label="主导航">
+              <Link className="oracle-subpage-pill" href="/chart">起盘</Link>
+              <span aria-hidden="true">·</span>
+              <Link className="oracle-subpage-pill" href="/heming">合盘</Link>
+              <button type="button" className="oracle-subpage-actions-edition">普通版</button>
+            </nav>
+            <button type="button" className="oracle-subpage-burger" aria-label="菜单">☰</button>
+          </div>
+        </header>
+        <div id="main-content" className="oracle-subpage-body">
+          {children}
+        </div>
+        <OracleFooter showBackLink={variant !== 'chart'} />
+      </main>
+    </>
   );
 }
 
 export function OracleHero({
-  pretitle,
   eyebrow,
   title,
   subtitle,
   description,
   stats,
+  align = 'left',
+  showDivider = false,
+  hideSubtitle = false,
 }: {
-  pretitle?: string;
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   description: string;
   stats?: string;
+  align?: 'left' | 'center';
+  showDivider?: boolean;
+  hideSubtitle?: boolean;
 }) {
   return (
-    <section className="oracle-subpage-hero">
-      {pretitle && <p className="oracle-subpage-pretitle">{pretitle}</p>}
-      <span>{eyebrow}</span>
+    <section className={`oracle-subpage-hero oracle-subpage-hero--${align}`}>
+      {eyebrow && <span className="oracle-subpage-eyebrow">{eyebrow}</span>}
       <h1>{title}</h1>
-      <p className="oracle-subpage-subtitle">{subtitle}</p>
+      {!hideSubtitle && subtitle && (
+        <p className="oracle-subpage-subtitle">{subtitle}</p>
+      )}
       <p className="oracle-subpage-description">{description}</p>
       {stats && <div className="oracle-subpage-stats">{stats}</div>}
+      {showDivider && <div className="oracle-subpage-hero-divider" aria-hidden="true" />}
     </section>
   );
 }
@@ -147,10 +172,10 @@ export function SectionTitle({
 }) {
   return (
     <div className="oracle-section-title">
-      <div>
-        <span>{index}</span>
+      <div className="oracle-section-title-row">
+        <span className="oracle-section-index">{index}</span>
         <h2>{title}</h2>
-        {subtitle && <p>{subtitle}</p>}
+        {subtitle && <span className="oracle-section-subtitle">{subtitle}</span>}
       </div>
       {action}
     </div>
@@ -163,25 +188,25 @@ export function SanjiPage({
   quote,
   quoteFrom,
   quoteSource,
-  intro,
   statLine,
   sectionTitle,
   sectionSubtitle,
   quoteIndex = '02',
   beforeQuote,
+  disclaimer,
   children,
 }: {
   category: SanJiCategory;
   modules: NiModule[];
-  quote: string;
+  quote: React.ReactNode;
   quoteFrom: string;
   quoteSource?: string;
-  intro: string;
   statLine: string;
   sectionTitle: string;
   sectionSubtitle: string;
   quoteIndex?: string;
   beforeQuote?: React.ReactNode;
+  disclaimer?: string;
   children?: React.ReactNode;
 }) {
   const config = SANJI_CATEGORIES.find(item => item.key === category) ?? SANJI_CATEGORIES[0];
@@ -190,34 +215,49 @@ export function SanjiPage({
   return (
     <OracleChrome tone={tone}>
       <OracleHero
-        eyebrow={`NI HAI XIA · ${config.nameEn.toUpperCase().replace(' ', ' ')}`}
+        eyebrow={`NI HAI XIA · ${config.nameEn.toUpperCase()}`}
         title={config.name}
         subtitle={config.meaning}
-        description={intro}
-        stats={statLine}
+        description={statLine}
+        showDivider
       />
 
       <section className="oracle-content-band">
         <SectionTitle index="01" title={sectionTitle} subtitle={sectionSubtitle} />
         <div className="oracle-module-rail" aria-label={sectionTitle}>
-          {modules.map(module => (
-            <Link
-              key={module.id}
-              className="oracle-module-card"
-              href={module.slug === 'ziwei' ? '/knowledge' : '#'}
-            >
-              <span className="oracle-module-status">LIVE</span>
-              {productionCardCopy[category]?.[module.slug]?.pre && (
-                <em>{productionCardCopy[category][module.slug].pre}</em>
-              )}
-              <strong>{module.nameEn}</strong>
-              <b>{module.name}</b>
-              <p>{productionCardCopy[category]?.[module.slug]?.subtitle ?? module.subtitle}</p>
-              <small>{productionChapterLabels[category]?.[module.slug] ?? `${module.chapters.length} 章节${module.school ? ` · ${module.school}` : ' · 进入学科 →'}`}</small>
-            </Link>
-          ))}
+          {modules.map(module => {
+            const { pre, line1, line2, chapter } = getModuleCardCopy(category, module);
+
+            return (
+              <Link
+                key={module.id}
+                className="oracle-module-card"
+                href={`/sanji/${module.slug}`}
+              >
+                <Image
+                  src={moduleSceneSrc(category, module.slug)}
+                  alt={module.name}
+                  fill
+                  sizes="300px"
+                  className="oracle-module-card-img"
+                />
+                <div className="oracle-module-card-shade" aria-hidden="true" />
+                {pre && <span className="oracle-module-card-pre">{pre}</span>}
+                <span className="oracle-module-status oracle-module-status--live">LIVE</span>
+                <div className="oracle-module-card-body">
+                  <div className="oracle-module-card-en">{module.nameEn}</div>
+                  <h3>{module.name}</h3>
+                  <p className="oracle-module-card-desc">{line1}</p>
+                  {line2 && <p className="oracle-module-card-meta">{line2}</p>}
+                  <div className="oracle-module-card-chapter">{chapter}</div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
-        <p className="oracle-scroll-hint">← 横向滑动浏览全部学科 →</p>
+        {category === 'tianji' && (
+          <p className="oracle-scroll-hint">← 横向滑动浏览全部学科 →</p>
+        )}
       </section>
 
       {beforeQuote}
@@ -225,22 +265,36 @@ export function SanjiPage({
       <section className="oracle-content-band">
         <SectionTitle index={quoteIndex} title="倪师一言" />
         <div className="oracle-quote-panel">
-          <p>{quote}</p>
+          <div className="oracle-quote-panel-body">{quote}</div>
           <blockquote>
             <span>「{quoteFrom}」</span>
             {quoteSource && <cite>— {quoteSource}</cite>}
           </blockquote>
         </div>
-        {children}
-        <div className="oracle-sanity-nav">
-          {SANJI_CATEGORIES.map(item => (
-            <Link key={item.key} href={item.href} className={item.key === category ? 'is-active' : ''}>
-              {item.name}<span>{item.meaning}</span>
-            </Link>
-          ))}
-        </div>
-        <Link className="oracle-back-home" href="/">← 返回首页</Link>
+        {disclaimer && <p className="oracle-renji-disclaimer">{disclaimer}</p>}
+        {!children && (
+          <div className="oracle-sanity-nav">
+            {SANJI_CATEGORIES.map(item => (
+              <Link key={item.key} href={item.href} className={item.key === category ? 'is-active' : ''}>
+                {item.name}<span>{item.meaning}</span>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
+
+      {children && (
+        <section className="oracle-content-band">
+          {children}
+          <div className="oracle-sanity-nav">
+            {SANJI_CATEGORIES.map(item => (
+              <Link key={item.key} href={item.href} className={item.key === category ? 'is-active' : ''}>
+                {item.name}<span>{item.meaning}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </OracleChrome>
   );
 }
@@ -249,17 +303,21 @@ export function TwinsPage() {
   return (
     <OracleChrome tone="ink">
       <OracleHero
-        eyebrow="02 / DESTINY TWINS"
         title="命运双胞胎"
-        subtitle="Destiny Twins"
-        description="分析命盘配置 —— 查询与您星曜宫位相同的命理学样本群体。数据分析工具，供学术研究与文化参考。"
+        description="分析命盘配置 —— 查询与您星曜宫位相同的命理学样本群体。数据分析工具，供学术研究与文化参考；真人地理分布即将上线，仅显示地域、不暴露身份。"
+        showDivider
       />
 
       <section className="oracle-content-band">
-        <SectionTitle index="INPUT" title="输入你的出生信息" subtitle="填出生地以校正真太阳时，时辰差一格，整张盘和双胞胎都会变。" />
+        <SectionTitle
+          index="INPUT"
+          title="输入你的出生信息"
+          subtitle="填出生地以校正真太阳时 — 时辰差一格，整张盘和双胞胎都会变。"
+        />
         <div className="oracle-form-grid oracle-form-grid--centered">
           <div className="oracle-form-card">
             <BirthForm
+              appearance="light"
               onSubmit={() => {
                 window.location.href = '/chart';
               }}
@@ -273,7 +331,7 @@ export function TwinsPage() {
         <div className="oracle-research-grid">
           {[
             ['01', '公历出生日期', '年、月、日精确到 1 天'],
-            ['02', '真太阳时辰', '120 分钟分辨率，已含经纬度校正'],
+            ['02', '真太阳时辰', '120 分钟分辨率，已含经纬度→真太阳时校正'],
             ['03', '性别', '男 / 女'],
           ].map(item => (
             <article key={item[0]}>
@@ -288,12 +346,17 @@ export function TwinsPage() {
       <section className="oracle-content-band">
         <SectionTitle index="02" title="不参与配对" subtitle="What's NOT in the match key" />
         <div className="oracle-panel">
-          <ul className="oracle-check-list">
-            <li>出生地：经纬度只是算真太阳时的中间变量，不参与配对。</li>
-            <li>城市、行政区：地理差异是后续解读维度，不是排除条件。</li>
-            <li>具体分钟数：120 分钟时辰窗口内任何分钟都算同一时辰。</li>
+          <ul className="oracle-exclude-list">
+            <li>出生地（经纬度只是算真太阳时的中间变量，不参与配对）</li>
+            <li>城市、行政区</li>
+            <li>出生时的具体分钟数（120 分钟时辰窗口内任何分钟都算同一时辰）</li>
           </ul>
-          <p>张三在北京 8:00 出生和李四在乌鲁木齐 9:10 出生，只要真太阳时同落「辰时」，两人本命盘、大限、流年、流月、流日、流时全部相同。</p>
+          <p>
+            为什么经纬度不参与？因为经纬度的作用是<strong>算真太阳时</strong>的中间变量。
+            张三在北京 8:00 出生（真太阳时 ~7:46）和李四在乌鲁木齐 9:10 出生（真太阳时 ~7:00）都落在「辰时」窗口，
+            两人本命盘 + 大限 + 流年流月流日流时全部相同 → 这才是命运双胞胎。
+            地理差异不是排除条件，反而是<strong>核心解读维度</strong>。
+          </p>
         </div>
       </section>
 
@@ -301,10 +364,10 @@ export function TwinsPage() {
         <SectionTitle index="03" title="功能路线图" subtitle="4 个层次的能力，01-03 已就绪，04 筹备中" />
         <div className="oracle-roadmap">
           {[
-            ['01', '严格匹配 + 人数估算', '同 key 即同盘，无需 AI；按出生年人口给出全国估算。'],
-            ['02', '出生地时间窗', '逐城反推你的双胞胎在当地什么钟表时间出生。'],
-            ['03', '结构双子星 Top20', '在 67.5 万张命盘中检索结构最相近的盘。'],
-            ['04', '人生时间线对照', '把双子星盘的大限运程逐段并排，做预演式参考。'],
+            ['01', '严格匹配 + 人数估算 已就绪', '同年月日 × 同真太阳时辰 × 同性别 → 确定性命中（同 key 即同盘，无需 AI）；并按出生年人口给出「全国约 N 人与你同盘」的估算。'],
+            ['02', '出生地时间窗 已就绪', '同命格但你在北京、他在乌鲁木齐 → 逐城反推「你的双胞胎在当地什么钟表时间出生」（真太阳时换算，专业版全国 30+ 城）。'],
+            ['03', '结构双子星 Top20 已就绪', '在 67.5 万张命盘中检索与你结构最相近的盘：同年同构（大限流年同步展开）与跨年同构分层呈现。专业版专属。'],
+            ['04', '人生时间线对照 筹备中', '把双子星盘的大限运程逐段并排，对照你即将面对的同段大限，做预演式参考。'],
           ].map(item => (
             <article key={item[0]}>
               <span>{item[0]}</span>
@@ -323,7 +386,9 @@ export function TwinsPage() {
           <strong>877w<small>解读文案条数</small></strong>
           <strong>77 年<small>覆盖 1950–2026</small></strong>
         </div>
-        <p className="oracle-note-text">「877w」指 67.5 万独立命盘 × 13 个解读维度的解读文案总量，并非真人数量。命运双胞胎的真人地理分布功能正在筹备中。</p>
+        <p className="oracle-note-text">
+          「877w」指 67.5 万独立命盘 × 13 个解读维度的解读文案总量，并非真人数量。命运双胞胎的真人地理分布功能正在筹备中（上线后仅显示地域分布，不暴露姓名、生辰等任何个人身份信息）。
+        </p>
         <div className="oracle-sanity-nav oracle-sanity-nav--cta">
           <Link href="/chart">先去起盘 →<span>生成你的命盘与指纹</span></Link>
           <Link href="/chart">专业版 →<span>逐维深度解读</span></Link>
@@ -335,514 +400,4 @@ export function TwinsPage() {
   );
 }
 
-export function ChartOraclePage() {
-  const [chart, setChart] = useState<ZiweiChart | null>(null);
-  const [selectedPalace, setSelectedPalace] = useState<Palace | null>(null);
-
-  if (chart) {
-    return (
-      <OracleChrome tone="gold" compact>
-        <section className="oracle-chart-workspace">
-          <div>
-            <button className="oracle-back-home" type="button" onClick={() => { setChart(null); setSelectedPalace(null); }}>
-              ← 重新起盘
-            </button>
-            <ChartBoard chart={chart} onPalaceSelect={setSelectedPalace} />
-          </div>
-          <InsightPanel chart={chart} selectedPalace={selectedPalace} />
-        </section>
-      </OracleChrome>
-    );
-  }
-
-  return (
-    <OracleChrome tone="gold" variant="chart">
-      <OracleHero
-        eyebrow="01 / DESTINY ENGINE"
-        title="起紫微命盘"
-        subtitle="Destiny Intelligence Engine"
-        description="输入出生年月日时 · 以公历为准"
-      />
-      <section className="oracle-content-band">
-        <div className="oracle-form-grid oracle-form-grid--centered">
-          <div className="oracle-form-card">
-            <BirthForm onSubmit={(info) => setChart(generateChart(info))} />
-          </div>
-        </div>
-        <div className="oracle-form-note">
-          <p>登录后自动保存命盘 · 换设备也能看记录</p>
-          <span>未登录时排盘不会保存，刷新即失</span>
-        </div>
-      </section>
-    </OracleChrome>
-  );
-}
-
-export function OracleStyles() {
-  return (
-    <style jsx global>{`
-      .oracle-subpage {
-        --oracle-page-accent: ${toneColor.gold};
-        min-height: 100vh;
-        background: #f8f6ef;
-        color: #111;
-        font-family: Inter, "Helvetica Neue", Arial, "PingFang SC", sans-serif;
-      }
-      .oracle-subpage--green { --oracle-page-accent: ${toneColor.green}; }
-      .oracle-subpage--violet { --oracle-page-accent: ${toneColor.violet}; }
-      .oracle-subpage--ink { --oracle-page-accent: ${toneColor.ink}; }
-      .oracle-subpage a { color: inherit; }
-      .oracle-subpage-header {
-        position: sticky;
-        top: 0;
-        z-index: 80;
-        height: 64px;
-        padding: 0 32px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: rgba(248, 246, 239, 0.88);
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-        backdrop-filter: blur(18px);
-      }
-      .oracle-subpage-logo {
-        font-size: 26px;
-        line-height: 1;
-        font-weight: 900;
-        text-decoration: none;
-        letter-spacing: -0.02em;
-      }
-      .oracle-subpage-actions {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        color: #c9c5b8;
-        font-size: 13px;
-      }
-      .oracle-subpage-actions a,
-      .oracle-subpage-actions button {
-        border: 1px solid rgba(0, 0, 0, 0.12);
-        border-radius: 999px;
-        background: transparent;
-        color: #111;
-        padding: 5px 11px;
-        text-decoration: none;
-        font: inherit;
-        cursor: pointer;
-      }
-      .oracle-subpage-actions button {
-        background: #111;
-        color: #fff;
-        border-color: #111;
-      }
-      .oracle-subpage-hero {
-        padding: 72px 24px 44px;
-        max-width: 1040px;
-        margin: 0 auto;
-        text-align: center;
-      }
-      .oracle-subpage-hero > span,
-      .oracle-section-title span,
-      .oracle-panel > span,
-      .oracle-module-status {
-        color: var(--oracle-page-accent);
-        font-size: 11px;
-        letter-spacing: 0.28em;
-        text-transform: uppercase;
-      }
-      .oracle-subpage-hero h1 {
-        margin: 10px 0 8px;
-        font-size: clamp(42px, 8vw, 96px);
-        line-height: 0.95;
-        letter-spacing: 0;
-        font-weight: 900;
-      }
-      .oracle-subpage-subtitle {
-        margin: 0;
-        font-size: clamp(18px, 3vw, 32px);
-        color: #34312a;
-        font-weight: 600;
-      }
-      .oracle-subpage-description {
-        max-width: 720px;
-        margin: 18px auto 0;
-        color: #686259;
-        font-size: 15px;
-        line-height: 1.85;
-      }
-      .oracle-subpage-stats {
-        margin: 20px auto 0;
-        display: inline-flex;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 999px;
-        padding: 8px 16px;
-        color: #4c473e;
-        background: rgba(255,255,255,0.56);
-        font-size: 13px;
-      }
-      .oracle-content-band {
-        max-width: 1160px;
-        margin: 0 auto;
-        padding: 34px 24px;
-      }
-      .oracle-section-title {
-        display: flex;
-        align-items: end;
-        justify-content: space-between;
-        gap: 20px;
-        margin-bottom: 20px;
-      }
-      .oracle-section-title h2 {
-        margin: 4px 0 0;
-        font-size: clamp(24px, 3vw, 42px);
-        line-height: 1.1;
-      }
-      .oracle-section-title p {
-        margin: 8px 0 0;
-        color: #777168;
-        font-size: 14px;
-      }
-      .oracle-module-rail {
-        display: grid;
-        grid-auto-flow: column;
-        grid-auto-columns: minmax(260px, 330px);
-        gap: 16px;
-        overflow-x: auto;
-        padding: 2px 2px 18px;
-        scroll-snap-type: x mandatory;
-      }
-      .oracle-module-card {
-        min-height: 300px;
-        padding: 20px;
-        border: 1px solid rgba(0,0,0,0.11);
-        border-radius: 8px;
-        background: rgba(255,255,255,0.72);
-        text-align: left;
-        scroll-snap-align: start;
-        cursor: pointer;
-        transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
-      }
-      .oracle-module-card:hover,
-      .oracle-module-card.is-active {
-        transform: translateY(-3px);
-        background: #fff;
-        border-color: color-mix(in srgb, var(--oracle-page-accent) 55%, rgba(0,0,0,0.12));
-      }
-      .oracle-module-card strong,
-      .oracle-module-card b {
-        display: block;
-      }
-      .oracle-module-card strong {
-        margin-top: 30px;
-        font-size: 14px;
-        color: #827a70;
-      }
-      .oracle-module-card b {
-        margin-top: 6px;
-        font-size: 24px;
-      }
-      .oracle-module-card p {
-        margin: 16px 0;
-        color: #625d55;
-        line-height: 1.7;
-        font-size: 13px;
-      }
-      .oracle-module-card small {
-        color: #8a847a;
-      }
-      .oracle-scroll-hint {
-        text-align: center;
-        color: #aaa395;
-        font-size: 12px;
-        margin: 4px 0 0;
-      }
-      .oracle-detail-grid,
-      .oracle-form-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
-        gap: 20px;
-        align-items: start;
-      }
-      .oracle-form-grid--single {
-        grid-template-columns: minmax(320px, 660px) minmax(260px, 1fr);
-      }
-      .oracle-panel,
-      .oracle-form-card {
-        border: 1px solid rgba(0,0,0,0.09);
-        border-radius: 8px;
-        background: rgba(255,255,255,0.76);
-        padding: 22px;
-      }
-      .oracle-panel h3 {
-        margin: 8px 0 12px;
-        font-size: 22px;
-      }
-      .oracle-panel p {
-        color: #625d55;
-        line-height: 1.82;
-        font-size: 14px;
-      }
-      .oracle-tag-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 18px;
-      }
-      .oracle-tag-row span {
-        border: 1px solid rgba(0,0,0,0.1);
-        border-radius: 999px;
-        padding: 5px 10px;
-        color: #665f55;
-        font-size: 12px;
-      }
-      .oracle-chapter-list {
-        display: grid;
-        gap: 12px;
-      }
-      .oracle-chapter-list article,
-      .oracle-roadmap article,
-      .oracle-research-grid article {
-        display: grid;
-        grid-template-columns: 48px minmax(0, 1fr);
-        gap: 16px;
-        padding: 18px;
-        border: 1px solid rgba(0,0,0,0.09);
-        border-radius: 8px;
-        background: rgba(255,255,255,0.72);
-      }
-      .oracle-chapter-list article > span,
-      .oracle-roadmap span,
-      .oracle-research-grid span {
-        color: #bfb8aa;
-        font-variant-numeric: tabular-nums;
-      }
-      .oracle-chapter-list h3,
-      .oracle-roadmap h3,
-      .oracle-research-grid h3 {
-        margin: 0 0 8px;
-        font-size: 18px;
-      }
-      .oracle-chapter-list p,
-      .oracle-roadmap p,
-      .oracle-research-grid p {
-        margin: 0;
-        color: #686259;
-        font-size: 13px;
-        line-height: 1.7;
-      }
-      .oracle-chapter-list ul {
-        margin: 12px 0 0;
-        padding-left: 18px;
-        color: #5f5a52;
-        font-size: 13px;
-        line-height: 1.7;
-      }
-      .oracle-quote-panel {
-        border-left: 2px solid var(--oracle-page-accent);
-        padding: 6px 0 6px 22px;
-        color: #4f493f;
-      }
-      .oracle-quote-panel p {
-        max-width: 850px;
-        line-height: 1.9;
-      }
-      .oracle-quote-panel blockquote {
-        margin: 18px 0 0;
-        font-size: clamp(20px, 3vw, 34px);
-        line-height: 1.35;
-        font-weight: 700;
-      }
-      .oracle-sanity-nav {
-        margin-top: 28px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-      .oracle-sanity-nav a,
-      .oracle-back-home,
-      .oracle-section-title a {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        border: 1px solid rgba(0,0,0,0.12);
-        border-radius: 999px;
-        padding: 9px 14px;
-        text-decoration: none;
-        color: #2a2824;
-        background: rgba(255,255,255,0.5);
-        font-size: 13px;
-      }
-      .oracle-sanity-nav a.is-active {
-        background: #111;
-        color: #fff;
-      }
-      .oracle-sanity-nav span {
-        color: inherit;
-        opacity: 0.58;
-        letter-spacing: 0;
-        font-size: 12px;
-      }
-      .oracle-back-home {
-        width: fit-content;
-        margin-top: 22px;
-        cursor: pointer;
-      }
-      .oracle-research-grid,
-      .oracle-roadmap {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 14px;
-      }
-      .oracle-roadmap {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-      }
-      .oracle-check-list {
-        margin: 0 0 16px;
-        padding-left: 18px;
-        color: #4f493f;
-        line-height: 1.9;
-      }
-      .oracle-kpi-row {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-        margin-top: 20px;
-      }
-      .oracle-kpi-row strong {
-        border-top: 1px solid rgba(0,0,0,0.1);
-        padding-top: 12px;
-        font-size: 28px;
-      }
-      .oracle-kpi-row small {
-        display: block;
-        color: #81786c;
-        font-size: 11px;
-        font-weight: 400;
-      }
-      .oracle-academy-stars {
-        display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
-        gap: 10px;
-      }
-      .oracle-academy-stars a,
-      .oracle-academy-feature-grid a,
-      .oracle-book-row a {
-        border: 1px solid rgba(0,0,0,0.1);
-        border-radius: 8px;
-        background: rgba(255,255,255,0.72);
-        padding: 16px;
-        text-decoration: none;
-        transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
-      }
-      .oracle-academy-stars a:hover,
-      .oracle-academy-feature-grid a:hover,
-      .oracle-book-row a:hover {
-        transform: translateY(-2px);
-        background: #fff;
-        border-color: rgba(0,0,0,0.25);
-      }
-      .oracle-academy-stars strong,
-      .oracle-academy-stars span,
-      .oracle-academy-feature-grid b,
-      .oracle-academy-feature-grid span,
-      .oracle-academy-feature-grid small,
-      .oracle-book-row span,
-      .oracle-book-row b,
-      .oracle-book-row p,
-      .oracle-book-row small {
-        display: block;
-      }
-      .oracle-academy-stars strong {
-        font-size: 22px;
-        margin-bottom: 8px;
-      }
-      .oracle-academy-stars span,
-      .oracle-academy-feature-grid span,
-      .oracle-book-row p {
-        color: #686259;
-        font-size: 13px;
-        line-height: 1.7;
-      }
-      .oracle-academy-feature-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 14px;
-        margin-top: 16px;
-      }
-      .oracle-academy-feature-grid b {
-        font-size: 20px;
-        margin-bottom: 8px;
-      }
-      .oracle-academy-feature-grid small,
-      .oracle-book-row small,
-      .oracle-book-row span,
-      .oracle-library-groups > div > span {
-        color: #9a9285;
-        font-size: 12px;
-      }
-      .oracle-library-groups {
-        display: grid;
-        gap: 18px;
-      }
-      .oracle-library-groups h3 {
-        margin: 4px 0;
-        font-size: 24px;
-      }
-      .oracle-library-groups > div > p {
-        margin: 0;
-        color: #686259;
-      }
-      .oracle-book-row {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 14px;
-      }
-      .oracle-book-row b {
-        margin: 8px 0;
-        font-size: 20px;
-      }
-      .oracle-chart-workspace {
-        max-width: 1280px;
-        margin: 0 auto;
-        padding: 28px 20px 60px;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
-        gap: 20px;
-      }
-      @media (max-width: 860px) {
-        .oracle-subpage-header { padding: 0 16px; height: 56px; }
-        .oracle-subpage-logo { font-size: 22px; }
-        .oracle-subpage-actions { font-size: 12px; }
-        .oracle-subpage-hero { padding-top: 46px; }
-        .oracle-detail-grid,
-        .oracle-form-grid,
-        .oracle-form-grid--single,
-        .oracle-chart-workspace {
-          grid-template-columns: 1fr;
-        }
-        .oracle-research-grid,
-        .oracle-roadmap {
-          grid-template-columns: 1fr;
-        }
-        .oracle-academy-stars {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-        .oracle-academy-feature-grid,
-        .oracle-book-row {
-          grid-template-columns: 1fr;
-        }
-        .oracle-section-title {
-          display: block;
-        }
-      }
-      @media (max-width: 520px) {
-        .oracle-subpage-actions span,
-        .oracle-subpage-actions button { display: none; }
-        .oracle-content-band { padding: 28px 14px; }
-        .oracle-panel,
-        .oracle-form-card { padding: 14px; }
-        .oracle-module-rail { grid-auto-columns: minmax(238px, 82vw); }
-      }
-    `}</style>
-  );
-}
+export { ChartOraclePage } from '@/components/ChartOraclePage';

@@ -1,8 +1,8 @@
-import { ChartOraclePage } from '@/components/OracleSubpage';
+import { ChartOraclePage } from '@/components/ChartOraclePage';
 
 export const metadata = {
-  title: '紫微命盘在线排盘 · Oracle',
-  description: '输入出生年月日时，使用本地开源紫微斗数排盘引擎生成命盘。',
+  title: '紫微命盘在线排盘 · Metis',
+  description: '输入公历生辰，AI 即时排出紫微斗数命盘并深度解读命格',
 };
 
 export default function ChartPage() {

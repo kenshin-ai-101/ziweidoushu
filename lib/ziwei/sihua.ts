@@ -11,7 +11,8 @@
  */
 
 import type { ZiweiChart, Palace, SiHua } from './types';
-import { SI_HUA_TABLE, STEMS } from './constants';
+import { SI_HUA_TABLE, STEMS, BRANCHES } from './constants';
+import { Solar } from 'lunar-javascript';
 
 // ─── 1) 由天干索引取四化四星 ───────────────────────────────────
 /** 天干索引 0-9 → { 禄, 权, 科, 忌 } 对应星名 */
@@ -37,6 +38,79 @@ export function getYearStemIndex(year: number): number {
 /** 公历年份 → 年柱地支索引（0=子, ... 11=亥） */
 export function getYearBranchIndex(year: number): number {
   return ((year - 4) % 12 + 12) % 12;
+}
+
+function getStemIndex(stemName: string): number {
+  const index = STEMS.indexOf(stemName);
+  return index >= 0 ? index : 0;
+}
+
+function getBranchIndex(branchName: string): number {
+  const index = BRANCHES.indexOf(branchName);
+  return index >= 0 ? index : 0;
+}
+
+export function getDaysInSolarMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
+export function normalizeSolarDate(year: number, month: number, day: number) {
+  const safeMonth = Math.min(12, Math.max(1, month || 1));
+  const maxDay = getDaysInSolarMonth(year, safeMonth);
+  return {
+    year,
+    month: safeMonth,
+    day: Math.min(maxDay, Math.max(1, day || 1)),
+  };
+}
+
+export interface TemporalGanzhiInfo {
+  solarYear: number;
+  solarMonth: number;
+  solarDay: number;
+  lunarYear: number;
+  lunarMonth: number;
+  lunarDay: number;
+  isLeapMonth: boolean;
+  yearStem: number;
+  yearBranch: number;
+  monthStem: number;
+  monthBranch: number;
+  dayStem: number;
+  dayBranch: number;
+  hourStem: number;
+  hourBranch: number;
+}
+
+export function getTemporalGanzhiInfo(
+  year: number,
+  month: number,
+  day: number,
+  hourBranch = 0,
+): TemporalGanzhiInfo {
+  const normalized = normalizeSolarDate(year, month, day);
+  const lunar = Solar.fromYmd(normalized.year, normalized.month, normalized.day).getLunar();
+  const rawLunarMonth = lunar.getMonth();
+  const dayStem = getStemIndex(lunar.getDayGan());
+  const safeHourBranch = ((hourBranch % 12) + 12) % 12;
+
+  return {
+    solarYear: normalized.year,
+    solarMonth: normalized.month,
+    solarDay: normalized.day,
+    lunarYear: lunar.getYear(),
+    lunarMonth: Math.abs(rawLunarMonth),
+    lunarDay: lunar.getDay(),
+    isLeapMonth: rawLunarMonth < 0,
+    yearStem: getStemIndex(lunar.getYearGan()),
+    yearBranch: getBranchIndex(lunar.getYearZhi()),
+    monthStem: getStemIndex(lunar.getMonthGan()),
+    monthBranch: getBranchIndex(lunar.getMonthZhi()),
+    dayStem,
+    dayBranch: getBranchIndex(lunar.getDayZhi()),
+    hourStem: getLiuShiStemIndex(dayStem, safeHourBranch),
+    hourBranch: safeHourBranch,
+  };
 }
 
 // ─── 3) 大限四化：取大限宫的宫干（非本命年干）───────────────
@@ -106,6 +180,119 @@ export function getLiuYueSiHua(yearStem: number, month: number): {
     stemName: STEMS[stemIndex] ?? '',
     transforms: getSiHuaByStem(stemIndex),
   };
+}
+
+// ─── 5b) 流日四化（五鼠遁：月干起日）────────────────────────────
+/** 流日天干：由流月天干 + 日序（1-30）推算 */
+export function getLiuRiStemIndex(monthStem: number, day: number): number {
+  const startStemOfDay: Record<number, number> = {
+    0: 0, 5: 0,
+    1: 2, 6: 2,
+    2: 4, 7: 4,
+    3: 6, 8: 6,
+    4: 8, 9: 8,
+  };
+  const base = startStemOfDay[monthStem] ?? 0;
+  return (base + ((day - 1) % 10) + 10) % 10;
+}
+
+export function getLiuRiSiHua(monthStem: number, day: number) {
+  const stemIndex = getLiuRiStemIndex(monthStem, day);
+  return {
+    stemIndex,
+    stemName: STEMS[stemIndex] ?? '',
+    transforms: getSiHuaByStem(stemIndex),
+  };
+}
+
+// ─── 5c) 流时四化（五鼠遁：日干起时）────────────────────────────
+/** 流时天干：由流日天干 + 时辰支 (0-11) 推算 */
+export function getLiuShiStemIndex(dayStem: number, hourBranch: number): number {
+  const startStemOfHour: Record<number, number> = {
+    0: 0, 5: 0,
+    1: 2, 6: 2,
+    2: 4, 7: 4,
+    3: 6, 8: 6,
+    4: 8, 9: 8,
+  };
+  const base = startStemOfHour[dayStem] ?? 0;
+  return (base + hourBranch + 10) % 10;
+}
+
+export function getLiuShiSiHua(dayStem: number, hourBranch: number) {
+  const stemIndex = getLiuShiStemIndex(dayStem, hourBranch);
+  return {
+    stemIndex,
+    stemName: STEMS[stemIndex] ?? '',
+    transforms: getSiHuaByStem(stemIndex),
+  };
+}
+
+export type TimeViewKey = 'mingpan' | 'daxian' | 'liunian' | 'liuyue' | 'liuri' | 'liushi';
+
+export interface TimeOverlayParams {
+  view: TimeViewKey;
+  chart: ZiweiChart;
+  liunianYear: number;
+  liuyueMonth: number;
+  liuriDay: number;
+  liushiHour: number;
+}
+
+/** 当前时间层四化 overlay：星名 → 禄/权/科/忌 */
+export function buildTimeOverlay(params: TimeOverlayParams): Record<string, string> {
+  const { view, chart, liunianYear, liuyueMonth, liuriDay, liushiHour } = params;
+  if (view === 'mingpan') return {};
+
+  if (view === 'daxian') {
+    const dx = chart.daXians[chart.currentDaXianIndex];
+    if (!dx) return {};
+    const dxPalace = chart.palaces.find(p => p.branch === dx.palaceBranch);
+    if (!dxPalace) return {};
+    const map = buildStarSiHuaMap(dxPalace.stem);
+    return Object.fromEntries(Object.entries(map).map(([k, v]) => [k, v]));
+  }
+
+  const temporal = getTemporalGanzhiInfo(liunianYear, liuyueMonth, liuriDay, liushiHour);
+  const yearStem = temporal.yearStem;
+
+  if (view === 'liunian') {
+    const map = buildStarSiHuaMap(yearStem);
+    return Object.fromEntries(Object.entries(map).map(([k, v]) => [k, v]));
+  }
+
+  const monthStem = temporal.monthStem;
+
+  if (view === 'liuyue') {
+    const map = buildStarSiHuaMap(monthStem);
+    return Object.fromEntries(Object.entries(map).map(([k, v]) => [k, v]));
+  }
+
+  const dayStem = temporal.dayStem;
+
+  if (view === 'liuri') {
+    const map = buildStarSiHuaMap(dayStem);
+    return Object.fromEntries(Object.entries(map).map(([k, v]) => [k, v]));
+  }
+
+  if (view === 'liushi') {
+    const hourStem = temporal.hourStem;
+    const map = buildStarSiHuaMap(hourStem);
+    return Object.fromEntries(Object.entries(map).map(([k, v]) => [k, v]));
+  }
+
+  return {};
+}
+
+export function getTimeOverlayLabel(view: TimeViewKey): string | undefined {
+  switch (view) {
+    case 'daxian': return '限';
+    case 'liunian': return '年';
+    case 'liuyue': return '月';
+    case 'liuri': return '日';
+    case 'liushi': return '时';
+    default: return undefined;
+  }
 }
 
 // ─── 6) 宫干自化检测 ──────────────────────────────────────────

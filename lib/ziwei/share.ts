@@ -1,5 +1,23 @@
 import type { BirthFormState } from '@/components/BirthForm';
 import type { BirthInfo } from './types';
+import { Lunar } from 'lunar-javascript';
+
+/** 农历年月日 → 公历（闰月 month 传正数 + isLeapMonth=true） */
+export function lunarToSolar(year: number, month: number, day: number, isLeapMonth = false) {
+  const lunarMonth = isLeapMonth ? -month : month;
+  const lunar = Lunar.fromYmd(year, lunarMonth, day);
+  const solar = lunar.getSolar();
+  return { year: solar.getYear(), month: solar.getMonth(), day: solar.getDay() };
+}
+
+export function isValidLunarDate(year: number, month: number, day: number, isLeapMonth = false): boolean {
+  try {
+    lunarToSolar(year, month, day, isLeapMonth);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /** 根据北京时间 + 经度计算真太阳时时辰支 (0-11) */
 export function calcTrueSolarBranch(clockHour: number, clockMinute: number, longitude: number): number {
@@ -21,6 +39,13 @@ export function formToBirthInfo(form: BirthFormState): BirthInfo {
   let y = parseInt(form.year) || 0;
   let m = parseInt(form.month) || 0;
   let d = parseInt(form.day) || 0;
+
+  if (form.calendarType === 'lunar' && y > 0 && m > 0 && d > 0) {
+    const solar = lunarToSolar(y, m, d, form.isLeapMonth);
+    y = solar.year;
+    m = solar.month;
+    d = solar.day;
+  }
 
   // 晚子时（23:00-23:59）按次日处理：用 Date 对象自动处理月末/年末进位
   if (!form.unknownTime) {
@@ -64,6 +89,8 @@ export function formToSearchParams(form: BirthFormState): URLSearchParams {
   if (form.city) p.set('c', form.city);
   if (form.longitude && form.longitude !== 120) p.set('lo', String(form.longitude));
   p.set('g', form.gender === 'male' ? 'm' : 'f');
+  if (form.calendarType === 'lunar') p.set('cal', 'lunar');
+  if (form.isLeapMonth) p.set('leap', '1');
   return p;
 }
 
@@ -85,5 +112,7 @@ export function searchParamsToForm(params: URLSearchParams): Partial<BirthFormSt
     city: params.get('c') || '',
     longitude: parseFloat(params.get('lo') || '120'),
     gender: params.get('g') === 'f' ? 'female' : 'male',
+    calendarType: params.get('cal') === 'lunar' ? 'lunar' : 'solar',
+    isLeapMonth: params.get('leap') === '1',
   };
 }

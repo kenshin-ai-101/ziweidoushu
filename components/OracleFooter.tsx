@@ -18,7 +18,7 @@ export function OracleFooter({ showBackLink = true }: { showBackLink?: boolean }
           <span>·</span>
           <a href="mailto:feedback@wdyziweidoushu666.com?subject=违法和不良信息举报">违法和不良信息举报</a>
           <span>·</span>
-          <a href="https://www.12377.cn/" target="_blank" rel="noopener noreferrer">12377 举报</a>
+          <a href="tel:12345">12345</a>
         </div>
       </div>
       <div className="oracle-site-footer-bottom">
@@ -31,8 +31,8 @@ export function OracleFooter({ showBackLink = true }: { showBackLink?: boolean }
           <span>©2026 Oracle</span>
         </p>
         <p className="oracle-site-footer-host">
-          主办主体：kenshin(OPC) · 客服：
-          <a href="mailto:kenshinshen1314@gmail.com">wdy778@outlook.com</a>
+          主办主体：kenshin(OPC) ·           联系方式：
+          <a href="mailto:kenshinshen1314@gmail.com">kenshinshen1314@gmail.com</a>
         </p>
       </div>
     </footer>

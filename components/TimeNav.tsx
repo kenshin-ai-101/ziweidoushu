@@ -1,24 +1,33 @@
 'use client';
 import { motion } from 'framer-motion';
-import { STEMS, SI_HUA_TABLE } from '@/lib/ziwei/constants';
+import { BRANCHES, STEMS, SI_HUA_TABLE } from '@/lib/ziwei/constants';
 import type { ZiweiChart } from '@/lib/ziwei/types';
+import {
+  buildTimeOverlay,
+  getTimeOverlayLabel,
+  getYearStemIndex,
+  getDaysInSolarMonth,
+  getTemporalGanzhiInfo,
+  type TimeViewKey,
+} from '@/lib/ziwei/sihua';
 
-export type TimeView = 'mingpan' | 'daxian' | 'liunian';
+export type TimeView = TimeViewKey;
 
 interface TimeNavProps {
   chart: ZiweiChart;
   view: TimeView;
   liunianYear: number;
+  liuyueMonth?: number;
+  liuriDay?: number;
+  liushiHour?: number;
   onViewChange: (view: TimeView) => void;
   onYearChange: (year: number) => void;
+  onMonthChange?: (month: number) => void;
+  onDayChange?: (day: number) => void;
+  onHourChange?: (hour: number) => void;
 }
 
-/** 由年份计算天干索引 (0-9) */
-export function getYearStemIndex(year: number): number {
-  return ((year - 4) % 10 + 10) % 10;
-}
-
-/** 根据天干索引返回四化映射：starName → SiHua */
+/** @deprecated use buildTimeOverlay from sihua */
 export function buildSiHuaOverlay(stemIndex: number): Record<string, string> {
   const stars = SI_HUA_TABLE[stemIndex];
   if (!stars) return {};
@@ -30,6 +39,11 @@ export function buildSiHuaOverlay(stemIndex: number): Record<string, string> {
   };
 }
 
+/** @deprecated use getYearStemIndex from sihua */
+export function getYearStemIndexLegacy(year: number): number {
+  return getYearStemIndex(year);
+}
+
 const SIHUA_COLORS: Record<string, string> = {
   '禄': '#4ade80',
   '权': '#60a5fa',
@@ -37,113 +51,128 @@ const SIHUA_COLORS: Record<string, string> = {
   '忌': '#f87171',
 };
 
+const SHICHEN_LABELS = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+
 export default function TimeNav({
   chart,
   view,
   liunianYear,
+  liuyueMonth = new Date().getMonth() + 1,
+  liuriDay = new Date().getDate(),
+  liushiHour = chart.birthInfo.hour,
   onViewChange,
   onYearChange,
+  onMonthChange,
+  onDayChange,
+  onHourChange,
 }: TimeNavProps) {
   const currentDx = chart.daXians[chart.currentDaXianIndex];
 
-  // 计算当前叠加四化信息
-  const getOverlayInfo = (): { stemName: string; overlay: Record<string, string> } | null => {
-    if (view === 'mingpan') return null;
+  const tabs: { key: TimeView; label: string }[] = [
+    { key: 'mingpan', label: '本命' },
+    { key: 'daxian', label: currentDx ? `大限 ${currentDx.startAge}–${currentDx.endAge}` : '大限' },
+    { key: 'liunian', label: '流年' },
+    { key: 'liuyue', label: '流月' },
+    { key: 'liuri', label: '流日' },
+    { key: 'liushi', label: '流时' },
+  ];
 
-    if (view === 'daxian' && currentDx) {
-      const dxPalace = chart.palaces.find(p => p.branch === currentDx.palaceBranch);
-      if (!dxPalace) return null;
-      const stemIndex = dxPalace.stem;
-      return {
-        stemName: STEMS[stemIndex],
-        overlay: buildSiHuaOverlay(stemIndex),
-      };
-    }
+  const overlayMap = buildTimeOverlay({
+    view,
+    chart,
+    liunianYear,
+    liuyueMonth,
+    liuriDay,
+    liushiHour,
+  });
+  const dateInfo = getTemporalGanzhiInfo(liunianYear, liuyueMonth, liuriDay, liushiHour);
+  const maxDay = getDaysInSolarMonth(liunianYear, liuyueMonth);
 
-    if (view === 'liunian') {
-      const stemIndex = getYearStemIndex(liunianYear);
-      return {
-        stemName: STEMS[stemIndex],
-        overlay: buildSiHuaOverlay(stemIndex),
-      };
-    }
-
-    return null;
+  const changeYear = (year: number) => {
+    onYearChange(year);
+    if (onDayChange) onDayChange(Math.min(liuriDay, getDaysInSolarMonth(year, liuyueMonth)));
   };
 
-  const overlayInfo = getOverlayInfo();
+  const changeMonth = (month: number) => {
+    const nextMonth = Math.min(12, Math.max(1, month));
+    onMonthChange?.(nextMonth);
+    if (onDayChange) onDayChange(Math.min(liuriDay, getDaysInSolarMonth(liunianYear, nextMonth)));
+  };
+
+  const overlayStemName = (() => {
+    if (view === 'mingpan') return '';
+    if (view === 'daxian' && currentDx) {
+      const dxPalace = chart.palaces.find(p => p.branch === currentDx.palaceBranch);
+      return dxPalace ? STEMS[dxPalace.stem] : '';
+    }
+    if (view === 'liunian') return STEMS[dateInfo.yearStem];
+    if (view === 'liuyue') return STEMS[dateInfo.monthStem];
+    if (view === 'liuri') return STEMS[dateInfo.dayStem];
+    if (view === 'liushi') return STEMS[dateInfo.hourStem];
+    return '';
+  })();
+
+  const showDateControls = view === 'liunian' || view === 'liuyue' || view === 'liuri' || view === 'liushi';
 
   return (
     <div className="mb-3">
-      {/* Tab 行 */}
       <div
-        className="flex items-center rounded-xl p-1 gap-1"
+        className="flex items-center rounded-xl p-1 gap-0.5 flex-wrap"
         style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}
       >
-        {/* 本命 */}
-        <TabButton
-          active={view === 'mingpan'}
-          onClick={() => onViewChange('mingpan')}
-        >
-          本命
-        </TabButton>
-
-        {/* 大限 */}
-        <TabButton
-          active={view === 'daxian'}
-          onClick={() => onViewChange('daxian')}
-        >
-          {currentDx ? `大限 ${currentDx.startAge}–${currentDx.endAge}` : '大限'}
-        </TabButton>
-
-        {/* 流年 — 含年份切换 */}
-        <div
-          className="relative flex-1 flex items-center justify-center rounded-lg py-1.5 gap-1 transition-all duration-200"
-          style={{
-            background: view === 'liunian'
-              ? 'rgba(212,168,67,0.12)'
-              : 'transparent',
-            border: view === 'liunian'
-              ? '1px solid rgba(212,168,67,0.25)'
-              : '1px solid transparent',
-          }}
-        >
-          <button
-            onClick={() => onViewChange('liunian')}
-            className="text-[10px] font-medium flex-1 text-center"
-            style={{ color: view === 'liunian' ? 'var(--t-gold)' : 'var(--t-faint)' }}
+        {tabs.map(tab => (
+          <TabButton
+            key={tab.key}
+            active={view === tab.key}
+            onClick={() => onViewChange(tab.key)}
           >
-            流年
-          </button>
-          {/* 年份 +/- */}
-          <div className="flex items-center gap-0.5">
-            <button
-              onClick={e => { e.stopPropagation(); onYearChange(liunianYear - 1); if (view !== 'liunian') onViewChange('liunian'); }}
-              className="text-[9px] w-4 h-4 flex items-center justify-center rounded"
-              style={{ color: 'var(--t-faint)' }}
-            >
-              ‹
-            </button>
-            <span
-              className="text-[10px] font-mono min-w-[28px] text-center cursor-pointer"
-              style={{ color: view === 'liunian' ? 'var(--t-gold)' : 'var(--t-faint)' }}
-              onClick={() => onViewChange('liunian')}
-            >
-              {liunianYear}
-            </span>
-            <button
-              onClick={e => { e.stopPropagation(); onYearChange(liunianYear + 1); if (view !== 'liunian') onViewChange('liunian'); }}
-              className="text-[9px] w-4 h-4 flex items-center justify-center rounded"
-              style={{ color: 'var(--t-faint)' }}
-            >
-              ›
-            </button>
-          </div>
-        </div>
+            {tab.label}
+          </TabButton>
+        ))}
       </div>
 
-      {/* 叠加四化说明行 */}
-      {overlayInfo && (
+      {showDateControls && (
+        <div className="flex items-center gap-2 mt-2 px-1 flex-wrap">
+          <div className="flex items-center gap-1">
+            <button type="button" className="time-nav-step" onClick={() => changeYear(liunianYear - 1)}>‹</button>
+            <span className="text-[10px] font-mono min-w-[36px] text-center" style={{ color: 'var(--t-gold)' }}>{liunianYear}</span>
+            <button type="button" className="time-nav-step" onClick={() => changeYear(liunianYear + 1)}>›</button>
+          </div>
+          {(view === 'liuyue' || view === 'liuri' || view === 'liushi') && onMonthChange && (
+            <div className="flex items-center gap-1">
+              <span className="text-[9px]" style={{ color: 'var(--t-faint)' }}>月</span>
+              <button type="button" className="time-nav-step" onClick={() => changeMonth(liuyueMonth - 1)}>‹</button>
+              <span className="text-[10px] font-mono min-w-[20px] text-center" style={{ color: 'var(--t-gold)' }}>{liuyueMonth}</span>
+              <button type="button" className="time-nav-step" onClick={() => changeMonth(liuyueMonth + 1)}>›</button>
+            </div>
+          )}
+          {(view === 'liuri' || view === 'liushi') && onDayChange && (
+            <div className="flex items-center gap-1">
+              <span className="text-[9px]" style={{ color: 'var(--t-faint)' }}>日</span>
+              <button type="button" className="time-nav-step" onClick={() => onDayChange(Math.max(1, liuriDay - 1))}>‹</button>
+              <span className="text-[10px] font-mono min-w-[20px] text-center" style={{ color: 'var(--t-gold)' }}>{liuriDay}</span>
+              <button type="button" className="time-nav-step" onClick={() => onDayChange(Math.min(maxDay, liuriDay + 1))}>›</button>
+            </div>
+          )}
+          {view === 'liushi' && onHourChange && (
+            <div className="flex items-center gap-1">
+              <span className="text-[9px]" style={{ color: 'var(--t-faint)' }}>时</span>
+              <button type="button" className="time-nav-step" onClick={() => onHourChange((liushiHour + 11) % 12)}>‹</button>
+              <span className="text-[10px] font-mono min-w-[20px] text-center" style={{ color: 'var(--t-gold)' }}>{SHICHEN_LABELS[liushiHour]}</span>
+              <button type="button" className="time-nav-step" onClick={() => onHourChange((liushiHour + 1) % 12)}>›</button>
+            </div>
+          )}
+          <span className="text-[9px]" style={{ color: 'var(--t-faint)' }}>
+            农历{dateInfo.isLeapMonth ? '闰' : ''}{dateInfo.lunarMonth}月{dateInfo.lunarDay}日 ·
+            {STEMS[dateInfo.yearStem]}{BRANCHES[dateInfo.yearBranch]}年
+            {view !== 'liunian' && ` · ${STEMS[dateInfo.monthStem]}${BRANCHES[dateInfo.monthBranch]}月`}
+            {(view === 'liuri' || view === 'liushi') && ` · ${STEMS[dateInfo.dayStem]}${BRANCHES[dateInfo.dayBranch]}日`}
+            {view === 'liushi' && ` · ${STEMS[dateInfo.hourStem]}${BRANCHES[dateInfo.hourBranch]}时`}
+          </span>
+        </div>
+      )}
+
+      {view !== 'mingpan' && overlayStemName && (
         <motion.div
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
@@ -151,10 +180,10 @@ export default function TimeNav({
           className="flex items-center gap-2 mt-1.5 px-1 flex-wrap"
         >
           <span className="text-[9px]" style={{ color: 'var(--t-faint)' }}>
-            {view === 'daxian' ? '大限' : `${liunianYear}`}·{overlayInfo.stemName}年四化：
+            {getTimeOverlayLabel(view)}·{overlayStemName}干四化：
           </span>
           {(['禄', '权', '科', '忌'] as const).map(sh => {
-            const starName = Object.keys(overlayInfo.overlay).find(k => overlayInfo.overlay[k] === sh);
+            const starName = Object.keys(overlayMap).find(k => overlayMap[k] === sh);
             if (!starName) return null;
             return (
               <span key={sh} className="text-[9px] font-medium" style={{ color: SIHUA_COLORS[sh] }}>
@@ -164,6 +193,22 @@ export default function TimeNav({
           })}
         </motion.div>
       )}
+
+      <style jsx>{`
+        .time-nav-step {
+          font-size: 9px;
+          width: 16px;
+          height: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 4px;
+          color: var(--t-faint);
+          background: transparent;
+          border: none;
+          cursor: pointer;
+        }
+      `}</style>
     </div>
   );
 }
@@ -179,8 +224,9 @@ function TabButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="flex-1 py-1.5 text-[10px] font-medium rounded-lg transition-all duration-200"
+      className="flex-1 min-w-[44px] py-1.5 text-[10px] font-medium rounded-lg transition-all duration-200"
       style={{
         background: active ? 'rgba(212,168,67,0.12)' : 'transparent',
         color: active ? 'var(--t-gold)' : 'var(--t-faint)',
