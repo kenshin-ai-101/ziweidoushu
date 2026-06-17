@@ -332,8 +332,13 @@ export default function KnowledgeHomePage() {
           })}
         </div>
 
-        <section id="dual-star" className="knowledge-anchor" style={{ marginTop: '72px', scrollMarginTop: '96px' }}>
-          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+        <div id="dual-star" className="mt-20" style={{ scrollMarginTop: '96px' }}>
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <div style={{ height: '1px', width: '40px', background: 'linear-gradient(to right, transparent, rgba(0,0,0,0.4))' }} />
+              <span style={{ fontSize: '14px', color: 'var(--ac)', letterSpacing: '0.4em' }}>DUAL STAR COMBOS</span>
+              <div style={{ height: '1px', width: '40px', background: 'linear-gradient(to left, transparent, rgba(0,0,0,0.4))' }} />
+            </div>
             <h2 style={{ fontSize: 'clamp(22px, 3vw, 32px)', fontWeight: 700, color: 'var(--tx-0)', letterSpacing: '0.12em', marginBottom: '8px' }}>
               双星同宫组合
             </h2>
@@ -352,15 +357,16 @@ export default function KnowledgeHomePage() {
                   data-search-item="true"
                   data-search-text={combo.searchText}
                   href={`/knowledge/combo/${combo.slug}`}
-                  className="knowledge-card glass-static hover:border-black/40"
+                  className="glass-static hover:border-black/40"
                   style={{
-                    ...cardStyle(hidden),
+                    display: hidden ? 'none' : 'block',
                     padding: '12px 8px',
                     background: 'var(--bg-card)',
                     border: '1px solid rgba(0,0,0,0.2)',
                     borderRadius: '10px',
                     textDecoration: 'none',
                     textAlign: 'center',
+                    transition: 'all 0.2s',
                   }}
                 >
                   <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--tx-0)', letterSpacing: '0.1em' }}>{combo.name}</div>
@@ -369,7 +375,7 @@ export default function KnowledgeHomePage() {
               );
             })}
           </div>
-        </section>
+        </div>
 
         <section id="patterns" className="knowledge-anchor" style={{ marginTop: '72px', scrollMarginTop: '96px' }}>
           <div style={{ textAlign: 'center', marginBottom: '28px' }}>
