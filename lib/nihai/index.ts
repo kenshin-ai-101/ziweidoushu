@@ -14,6 +14,20 @@ export * from './types';
 export { TIANJI_MODULES, HEXAGRAMS, FENGSHUI_ENTRIES, TIANJI_EPISODES, TIANJI_QUOTES, TIANJI_STATS } from './tianji';
 export { RENJI_MODULES, ACU_EXPERIENCES, TRANS_NEEDLING, HANTANG_FORMULAS, CLASSIC_FORMULAS, RENJI_STATS } from './renji';
 export { DIJI_MODULES, DIJI_STATS } from './diji';
+export {
+  ALL_TIANJI_MODULES,
+  ALL_SANJI_MODULES,
+  EXTRA_TIANJI_MODULES,
+  getModuleBySlug,
+  getCategoryConfig,
+  getSiblingModules,
+  getModuleSceneSrc,
+  getModuleDisplayIcon,
+  getModuleCardSubtitle,
+  getModuleChapterCount,
+  getModuleNextSteps,
+  getModuleDisclaimer,
+} from './modules';
 
 /** 倪海厦完整传记 */
 export const NI_HAIXIA_BIO = {
