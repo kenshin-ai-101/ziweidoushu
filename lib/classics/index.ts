@@ -9,12 +9,16 @@ import type { Book, Paragraph, SearchHit } from './types';
 import { guSuiFu } from './data/gusuifu';
 import { ziWeiQuanJi } from './data/quanji';
 import { ziWeiQuanShu } from './data/quanshu';
+import { zangShu } from './data/zangshu';
+import { qingNangJing } from './data/qingnangjing';
 
 /** 所有已收录古籍 */
 export const ALL_BOOKS: Book[] = [
   guSuiFu,
   ziWeiQuanJi,
   ziWeiQuanShu,
+  zangShu,
+  qingNangJing,
 ];
 
 /** 总段落数（用于首页统计） */
