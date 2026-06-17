@@ -44,7 +44,7 @@ export default function Page() {
     >
       <div className="oracle-inline-links">
         <div className="oracle-sanity-nav">
-          <Link href="/library">《黄帝内经·素问》<span>3 章 →</span></Link>
+          <Link href="/library/huangdineijing">《黄帝内经·素问》<span>3 章 →</span></Link>
         </div>
       </div>
     </SanjiPage>

@@ -11,6 +11,7 @@ import { ziWeiQuanJi } from './data/quanji';
 import { ziWeiQuanShu } from './data/quanshu';
 import { zangShu } from './data/zangshu';
 import { qingNangJing } from './data/qingnangjing';
+import { huangDiNeiJing } from './data/huangdineijing';
 
 /** 所有已收录古籍 */
 export const ALL_BOOKS: Book[] = [
@@ -19,6 +20,7 @@ export const ALL_BOOKS: Book[] = [
   ziWeiQuanShu,
   zangShu,
   qingNangJing,
+  huangDiNeiJing,
 ];
 
 /** 总段落数（用于首页统计） */

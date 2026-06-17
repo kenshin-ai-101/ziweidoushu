@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { cloneElement, isValidElement, useEffect } from 'react';
 import { OracleFooter } from '@/components/OracleFooter';
 import BirthForm from '@/components/BirthForm';
 import type { NiModule, SanJiCategory } from '@/lib/nihai';
@@ -215,6 +215,7 @@ export function SanjiPage({
   return (
     <OracleChrome tone={tone}>
       <OracleHero
+        key="sanji-hero"
         eyebrow={`NI HAI XIA · ${config.nameEn.toUpperCase()}`}
         title={config.name}
         subtitle={config.meaning}
@@ -222,7 +223,7 @@ export function SanjiPage({
         showDivider
       />
 
-      <section className="oracle-content-band">
+      <section key="sanji-modules" className="oracle-content-band">
         <SectionTitle index="01" title={sectionTitle} subtitle={sectionSubtitle} />
         <div className="oracle-module-rail" aria-label={sectionTitle}>
           {modules.map(module => {
@@ -260,9 +261,13 @@ export function SanjiPage({
         )}
       </section>
 
-      {beforeQuote}
+      {beforeQuote
+        ? isValidElement(beforeQuote)
+          ? cloneElement(beforeQuote, { key: 'sanji-before-quote' })
+          : beforeQuote
+        : null}
 
-      <section className="oracle-content-band">
+      <section key="sanji-quote" className="oracle-content-band">
         <SectionTitle index={quoteIndex} title="倪师一言" />
         <div className="oracle-quote-panel">
           <div className="oracle-quote-panel-body">{quote}</div>
@@ -284,7 +289,7 @@ export function SanjiPage({
       </section>
 
       {children && (
-        <section className="oracle-content-band">
+        <section key="sanji-extra" className="oracle-content-band">
           {children}
           <div className="oracle-sanity-nav">
             {SANJI_CATEGORIES.map(item => (
