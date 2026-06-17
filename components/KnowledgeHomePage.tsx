@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { ALL_STARS, ALL_TOPICS, getKnowledge, STAR_BRIEF_SEO, STAR_TO_SLUG } from '@/lib/seo/knowledge';
 import { TOPIC_PALACE_NAME } from '@/lib/ziwei/db-analysis';
-import { COMBO_REGISTRY } from '@/lib/seo/combo';
+import { COMBO_REGISTRY, COMBO_TOPIC_META, COMBO_TOPIC_ORDER } from '@/lib/seo/combo';
 import patternRegistry from '@/lib/seo/pattern-registry.json';
 import { OracleFooter } from '@/components/OracleFooter';
 
@@ -188,7 +188,7 @@ export default function KnowledgeHomePage() {
   }, []);
 
   return (
-    <div id="main-content" style={{ background: 'var(--bg-page)', minHeight: '100vh' }}>
+    <div id="main-content" className="knowledge-page" style={{ background: 'var(--bg-page)', minHeight: '100vh' }}>
       <MetisHeader />
 
       <section
@@ -207,7 +207,7 @@ export default function KnowledgeHomePage() {
             style={{
               position: 'absolute',
               inset: 0,
-              backgroundImage: 'url(/images/scenes/hero-bg-light.webp)',
+              backgroundImage: 'url(/images/scenes/hero-bg-light.jpg)',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               opacity: 0.85,
@@ -425,6 +425,58 @@ export default function KnowledgeHomePage() {
                   <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--tx-0)', letterSpacing: '0.1em' }}>{combo.name}</div>
                   <div style={{ fontSize: '14px', color: 'var(--tx-3)', marginTop: '4px' }}>{combo.palace}</div>
                 </Link>
+              );
+            })}
+          </div>
+          <div className="space-y-4">
+            {COMBO_REGISTRY.map(combo => {
+              const hidden = !matches(combo.searchText);
+              return (
+                <div
+                  key={combo.slug}
+                  data-search-item="true"
+                  data-search-text={combo.searchText}
+                  style={{
+                    ...cardStyle(hidden),
+                    background: 'var(--bg-card)',
+                    border: '0.5px solid rgba(0,0,0,0.18)',
+                    borderRadius: '12px',
+                    padding: '18px 22px',
+                  }}
+                >
+                  <div className="flex items-baseline gap-3 mb-2">
+                    <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--tx-0)', letterSpacing: '0.08em' }}>
+                      {combo.name}
+                    </span>
+                    <span style={{ fontSize: '14px', color: 'var(--ac-dim, var(--tx-3))', letterSpacing: '0.1em' }}>
+                      {combo.stars[0]} + {combo.stars[1]} · {combo.palace}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '14px', color: 'var(--tx-2)', lineHeight: 1.7, marginBottom: '10px' }}>{combo.brief}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {COMBO_TOPIC_ORDER.map(topic => {
+                      if (!combo.topics[topic]) return null;
+                      const meta = COMBO_TOPIC_META[topic];
+                      return (
+                        <Link
+                          key={topic}
+                          href={`/knowledge/combo/${combo.slug}#${topic}`}
+                          style={{
+                            fontSize: '14px',
+                            padding: '4px 10px',
+                            background: 'rgba(0,0,0,0.06)',
+                            border: '0.5px solid rgba(0,0,0,0.15)',
+                            borderRadius: '999px',
+                            color: 'var(--tx-2)',
+                            textDecoration: 'none',
+                          }}
+                        >
+                          {meta.palace} · {meta.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
               );
             })}
           </div>

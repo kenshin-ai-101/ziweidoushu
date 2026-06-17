@@ -117,6 +117,11 @@ export interface KnowledgeData {
   exists: boolean;
 }
 
+/** 展示用宫位名：命宫已含「宫」，其余补「宫」后缀 */
+export function formatPalaceLabel(palaceName: string): string {
+  return palaceName.endsWith('宫') ? palaceName : `${palaceName}宫`;
+}
+
 export function getKnowledge(star: string, topic: TopicKey): KnowledgeData {
   const profile = STAR_DB[star] as StarContent | undefined;
   const field = TOPIC_TO_FIELD[topic];

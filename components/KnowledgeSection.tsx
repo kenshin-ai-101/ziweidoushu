@@ -1,4 +1,14 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
+
+const PILL_LINK_STYLE: CSSProperties = {
+  fontSize: '14px',
+  padding: '6px 12px',
+  background: 'var(--bg-card)',
+  border: '1px solid rgba(0,0,0,0.25)',
+  borderRadius: '999px',
+  color: 'var(--tx-2)',
+  textDecoration: 'none',
+};
 
 export function KnowledgeSection({
   title,
@@ -12,8 +22,8 @@ export function KnowledgeSection({
   minimal?: boolean;
 }) {
   return (
-    <section style={{ marginBottom: minimal ? '24px' : '20px' }}>
-      <h3
+    <section style={{ marginBottom: minimal ? '24px' : '32px' }}>
+      <h2
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -22,33 +32,71 @@ export function KnowledgeSection({
           color: 'var(--ac)',
           fontWeight: 600,
           letterSpacing: '0.2em',
-          marginBottom: '8px',
+          marginBottom: '12px',
         }}
       >
-        <span
-          style={{
-            width: '3px',
-            height: '12px',
-            background: 'var(--ac)',
-            borderRadius: '2px',
-            opacity: 0.7,
-          }}
-        />
+        <span style={{ width: '4px', height: '14px', background: 'var(--ac)', borderRadius: '2px' }} />
         {title}
-      </h3>
+      </h2>
       <div
         style={{
           background: gradient
             ? 'linear-gradient(135deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.04) 100%)'
-            : 'var(--bg-card)',
+            : 'white',
           border: '1px solid rgba(0,0,0,0.15)',
-          borderRadius: gradient ? '10px' : '10px',
-          padding: gradient ? '16px 20px' : '16px 20px',
+          borderRadius: '10px',
+          padding: minimal ? '14px 18px' : '20px 22px',
         }}
       >
         {children}
       </div>
     </section>
+  );
+}
+
+export function KnowledgeRichText({
+  text,
+  emphasizeBullets = false,
+  muted = false,
+  bodySize = '14px',
+}: {
+  text: string;
+  emphasizeBullets?: boolean;
+  muted?: boolean;
+  bodySize?: '14px' | '15px';
+}) {
+  const normalized = text.replace(/\s·\s/g, '\n· ').trim();
+  const lines = normalized.split('\n');
+
+  return (
+    <div
+      style={{
+        fontSize: bodySize,
+        color: muted ? 'var(--tx-2)' : 'var(--tx-0)',
+        lineHeight: 2,
+        letterSpacing: '0.02em',
+      }}
+    >
+      {lines.map((line, i) => {
+        const trimmed = line.trim();
+        if (!trimmed) return null;
+
+        if (emphasizeBullets && trimmed.startsWith('·')) {
+          const match = trimmed.match(/^·\s*(.+?)\s*(——|--)\s*(.*)$/);
+          if (match) {
+            return (
+              <div key={i}>
+                · <strong>{match[1]}</strong>
+                {match[2]}
+                {match[3]}
+              </div>
+            );
+          }
+        }
+
+        return <div key={i}>{trimmed}</div>;
+      })}
+    </div>
   );
 }
 
@@ -104,3 +152,5 @@ export function KnowledgeFooter() {
     </footer>
   );
 }
+
+export { PILL_LINK_STYLE };
