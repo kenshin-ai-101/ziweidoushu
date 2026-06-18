@@ -599,11 +599,11 @@ body:has(.chart-page-root) {
   max-width: 100%;
 }
 .insight-headline {
-  font-size: 22px;
+  font-size: 27px;
   font-weight: 600;
   color: var(--tx-0);
-  letter-spacing: -0.02em;
-  line-height: 1.35;
+  letter-spacing: -0.022em;
+  line-height: 1.16;
   margin: 0 0 12px;
 }
 .insight-topics::-webkit-scrollbar {
@@ -647,6 +647,50 @@ body:has(.chart-page-root) {
   flex-basis: auto !important;
   overflow: visible !important;
   min-height: auto !important;
+  color: var(--tx-1);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", var(--font-sans, var(--font));
+}
+.insight-body-line {
+  color: var(--tx-2);
+  font-size: 14px;
+  line-height: 1.75;
+}
+.insight-body-line strong {
+  color: var(--tx-0);
+  font-weight: 600;
+}
+.insight-section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--tx-0);
+  letter-spacing: -0.01em;
+}
+.insight-section-title--overview {
+  font-size: 22px;
+}
+.insight-section-title--h2 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.insight-inline-marker {
+  color: var(--tx-0);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.insight-kicker {
+  color: var(--tx-3);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.insight-kicker-mark {
+  color: rgb(72, 84, 175);
+  opacity: 0.75;
+}
+.insight-loading-text {
+  color: var(--tx-3);
+  font-size: 13px;
 }
 .overview-visual {
   padding-top: 8px;
@@ -669,10 +713,10 @@ body:has(.chart-page-root) {
 .overview-title {
   margin: 16px 0 8px;
   color: var(--tx-0);
-  font-size: clamp(26px, 3.2vw, 34px);
-  font-weight: 800;
-  line-height: 1.18;
-  letter-spacing: 0;
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1.16;
+  letter-spacing: -0.022em;
 }
 .overview-radar-wrap {
   position: relative;
@@ -696,13 +740,14 @@ body:has(.chart-page-root) {
 .overview-axis-label strong {
   display: block;
   color: var(--tx-0);
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 .overview-axis-label span {
   display: block;
-  color: var(--tx-2);
-  font-size: 14px;
+  color: var(--tx-3);
+  font-size: 11.5px;
 }
 .overview-footnote {
   margin: 4px 0 16px;
@@ -740,14 +785,15 @@ body:has(.chart-page-root) {
   display: block;
   margin-bottom: 8px;
   color: var(--tx-0);
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 .overview-cards p {
   margin: 0;
   color: var(--tx-2);
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 14.5px;
+  line-height: 1.66;
 }
 .overview-detail {
   margin-top: 24px;
@@ -782,16 +828,16 @@ body:has(.chart-page-root) {
 .overview-section h3 {
   margin: 0 0 10px;
   color: var(--tx-0);
-  font-size: 20px;
-  font-weight: 800;
-  line-height: 1.3;
-  letter-spacing: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
 }
 .overview-section p {
   margin: 0 0 10px;
   color: var(--tx-2);
-  font-size: 15px;
-  line-height: 1.85;
+  font-size: 14px;
+  line-height: 1.75;
 }
 .overview-callout {
   margin-top: 8px;
@@ -805,8 +851,9 @@ body:has(.chart-page-root) {
 }
 .overview-callout p {
   color: var(--tx-0);
-  font-size: 16px;
-  font-weight: 650;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.75;
 }
 .overview-proof-grid {
   display: grid;
@@ -825,11 +872,12 @@ body:has(.chart-page-root) {
   margin-bottom: 6px;
   color: var(--tx-0);
   font-size: 14px;
-  font-weight: 750;
+  font-weight: 600;
 }
 .overview-proof-grid p {
   margin: 0;
   font-size: 14px;
+  line-height: 1.75;
 }
 .overview-sihua-row {
   display: grid;
@@ -1191,10 +1239,10 @@ body:has(.chart-page-root) {
   color: var(--tx-1);
 }
 .chart-time-card--active {
-  background: rgba(0, 0, 0, 0.14);
-  border: 1px solid rgba(0, 0, 0, 0.18);
-  box-shadow: rgba(0, 0, 0, 0.18) 0 0 0 1px inset;
-  color: var(--tx-1);
+  background: rgba(212, 168, 67, 0.12);
+  border: 1px solid rgba(212, 168, 67, 0.45);
+  box-shadow: rgba(212, 168, 67, 0.28) 0 0 0 1px inset;
+  color: #a67c00;
 }
 .chart-time-card--active-purple {
   background: rgba(110, 68, 168, 0.12);
@@ -1679,9 +1727,7 @@ body:has(.chart-page-root) {
   font-size: 9px !important;
 }
 .chart-board--production .palace-cell-name {
-  position: absolute;
-  right: 7px;
-  bottom: 6px;
+  position: static;
   display: block;
   padding: 0 !important;
   margin: 0 !important;
@@ -1689,6 +1735,51 @@ body:has(.chart-page-root) {
   font-size: 16px;
   line-height: 20px;
   text-align: right;
+}
+.chart-board--production .palace-cell-footer {
+  position: absolute;
+  right: 7px;
+  bottom: 6px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  max-width: calc(100% - 14px);
+}
+.chart-board--production .palace-cell-ganzhi {
+  margin: 0 !important;
+  color: var(--tx-0) !important;
+  opacity: 1 !important;
+  font-size: 12px !important;
+  line-height: 14px;
+  text-align: right;
+}
+.chart-board--production .palace-cell-stars {
+  position: absolute;
+  top: 24px;
+  left: 6px;
+  right: 38px;
+  bottom: 52px;
+  min-height: 0;
+  overflow: hidden;
+}
+.chart-board--production .palace-cell--empty .palace-cell-stars {
+  top: 38px;
+}
+.chart-board--production .palace-empty-label {
+  position: absolute;
+  top: 22px;
+  left: 7px;
+  right: 36px;
+  z-index: 1;
+  color: var(--tx-3) !important;
+  font-size: 10px !important;
+  font-style: normal !important;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .chart-board--production .palace-cell-name > span:first-child {
   display: block;
@@ -1705,6 +1796,7 @@ body:has(.chart-page-root) {
   margin-left: 2px;
   vertical-align: middle;
 }
+/* legacy: ganzhi was a direct child before footer refactor */
 .chart-board--production .palace-cell > .text-\[9px\] {
   position: absolute;
   right: 7px;
@@ -1714,9 +1806,6 @@ body:has(.chart-page-root) {
   opacity: 1 !important;
   font-size: 12px !important;
   line-height: 14px;
-}
-.chart-board--production .palace-cell-stars {
-  min-height: 0;
 }
 .chart-board--production .palace-star-columns {
   display: flex;
@@ -1776,12 +1865,6 @@ body:has(.chart-page-root) {
   font-size: 8px;
   font-weight: 500;
   line-height: 1;
-}
-.chart-board--production .palace-empty-label {
-  color: var(--tx-3) !important;
-  font-size: 10px !important;
-  font-style: normal !important;
-  line-height: 1.2;
 }
 .chart-board--production .inline-flex.text-\[8px\] {
   margin: 2px 0 0 !important;
@@ -1892,6 +1975,17 @@ body:has(.chart-page-root) {
   .chart-board--production .palace-cell {
     min-height: 128px !important;
     padding: 18px 5px 30px !important;
+  }
+  .chart-board--production .palace-cell-stars {
+    top: 20px;
+    bottom: 46px;
+  }
+  .chart-board--production .palace-cell--empty .palace-cell-stars {
+    top: 32px;
+  }
+  .chart-board--production .palace-empty-label {
+    top: 18px;
+    font-size: 9px !important;
   }
   .chart-board--production .palace-star-columns {
     gap: 4px;

@@ -75,6 +75,7 @@ export default function PalaceCell({
   const luckyStars = stars.filter(s => s.type === 'lucky');
   const shaStars = stars.filter(s => s.type === 'sha');
   const minorStars = stars.filter(s => s.type === 'minor');
+  const isEmptyPalace = majorStars.length === 0;
   const shownStars = [...majorStars, ...luckyStars, ...shaStars, ...minorStars];
   const emptyHint = luckyStars.length > 0 ? '空宫· 吉星拱照' : '空宫';
 
@@ -113,7 +114,10 @@ export default function PalaceCell({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.35, delay, ease: 'easeOut' }}
       onClick={onClick}
-      className="palace-cell relative flex flex-col p-1.5 cursor-pointer transition-all duration-200 h-full"
+      className={clsx(
+        'palace-cell relative flex flex-col p-1.5 cursor-pointer transition-all duration-200 h-full',
+        isEmptyPalace && 'palace-cell--empty',
+      )}
       style={{
         minHeight: '90px',
         background: isCurrentDaXian
@@ -126,7 +130,7 @@ export default function PalaceCell({
           ? 'rgba(212,168,67,0.04)'
           : 'var(--t-bg)',
         boxShadow: isCurrentDaXian
-          ? 'inset 3px 0 0 rgba(147,51,234,0.5)'
+          ? 'none'
           : isSelected
           ? 'inset 0 0 0 1.5px rgba(37,99,235,0.7)'
           : isSanFang
@@ -146,33 +150,37 @@ export default function PalaceCell({
         </div>
       )}
 
-      {/* 宫名行 */}
-      <div className="palace-cell-name flex items-center gap-1 mb-0.5 pr-8">
-        <span className={clsx('text-[10px] font-medium tracking-wide',
-          isMingGong ? 'text-amber-500' : isShenGong ? 'text-sky-500' : ''
-        )}
-          style={!isMingGong && !isShenGong ? { color: 'var(--t-faint)' } : undefined}
-        >
-          {name}
-        </span>
-        {isMingGong && (
-          <span className="text-[7px] text-amber-500/80 border border-amber-500/30 px-0.5 rounded leading-tight">命</span>
-        )}
-        {isShenGong && (
-          <span className="text-[7px] text-sky-500/80 border border-sky-500/30 px-0.5 rounded leading-tight">身</span>
-        )}
-      </div>
+      {/* 空宫提示（独立于星曜列，避免挤压布局） */}
+      {isEmptyPalace && (
+        <div className="palace-empty-label text-[10px] italic" style={{ color: 'var(--t-faint)', opacity: 0.6 }}>
+          {emptyHint}
+        </div>
+      )}
 
-      {/* 干支 */}
-      <div className="text-[9px] font-mono mb-1" style={{ color: 'var(--t-faint)', opacity: 0.75 }}>{ganzhi}</div>
-
-      {/* 主星 */}
-      <div className="palace-cell-stars flex flex-col gap-0.5 flex-1">
-        {majorStars.length === 0 && (
-          <span className="palace-empty-label text-[10px] italic" style={{ color: 'var(--t-faint)', opacity: 0.6 }}>{emptyHint}</span>
-        )}
+      {/* 星曜列 */}
+      <div className="palace-cell-stars flex flex-col gap-0.5 flex-1 min-h-0">
         <div className="palace-star-columns">
           {shownStars.map(renderStar)}
+        </div>
+      </div>
+
+      {/* 宫名 + 干支（生产模式由 CSS 堆叠在右下角） */}
+      <div className="palace-cell-footer">
+        <div className="palace-cell-ganzhi font-mono">{ganzhi}</div>
+        <div className="palace-cell-name flex items-center gap-1 mb-0.5 pr-8">
+          <span className={clsx('text-[10px] font-medium tracking-wide',
+            isMingGong ? 'text-amber-500' : isShenGong ? 'text-sky-500' : ''
+          )}
+            style={!isMingGong && !isShenGong ? { color: 'var(--t-faint)' } : undefined}
+          >
+            {name}
+          </span>
+          {isMingGong && (
+            <span className="text-[7px] text-amber-500/80 border border-amber-500/30 px-0.5 rounded leading-tight">命</span>
+          )}
+          {isShenGong && (
+            <span className="text-[7px] text-sky-500/80 border border-sky-500/30 px-0.5 rounded leading-tight">身</span>
+          )}
         </div>
       </div>
 

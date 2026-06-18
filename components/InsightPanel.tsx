@@ -493,19 +493,15 @@ function OverviewVisual({
           <p>思虑过动易摇摆，定守一处、做深一件，方能成器。</p>
         </div>
       </div>
-      {text.includes('**【命格总览】**') ? (
-        <AiContent text={text} />
-      ) : (
-        <OverviewDetail
-          chart={chart}
-          text={text}
-          timeView={timeView}
-          liunianYear={liunianYear}
-          liuyueMonth={liuyueMonth}
-          liuriDay={liuriDay}
-          liushiHour={liushiHour}
-        />
-      )}
+      <OverviewDetail
+        chart={chart}
+        text={text}
+        timeView={timeView}
+        liunianYear={liunianYear}
+        liuyueMonth={liuyueMonth}
+        liuriDay={liuriDay}
+        liushiHour={liushiHour}
+      />
     </div>
   );
 }
@@ -553,12 +549,13 @@ function AiSection({
         className={section.collapsible ? 'insight-section-toggle' : undefined}
       >
         <span
-          style={{
-            fontSize: isOverview ? 22 : isH2 ? 15 : 18,
-            fontWeight: 600,
-            color: 'var(--t-text, var(--tx-1))',
-            letterSpacing: '-0.01em',
-          }}
+          className={
+            isOverview
+              ? 'insight-section-title insight-section-title--overview'
+              : isH2
+                ? 'insight-section-title insight-section-title--h2'
+                : 'insight-section-title'
+          }
         >
           {section.title.startsWith('【') ? section.title : `【${section.title}】`}
         </span>
@@ -581,7 +578,7 @@ function AiLine({ line, streaming }: { line: string; streaming?: boolean }) {
   if (sectionMatch) {
     return (
       <div className="pt-2 pb-0.5">
-        <span className="text-[11px] font-semibold tracking-wide" style={{ color: 'var(--t-gold)' }}>
+        <span className="insight-inline-marker">
           【{sectionMatch[1]}】
         </span>
       </div>
@@ -589,11 +586,11 @@ function AiLine({ line, streaming }: { line: string; streaming?: boolean }) {
   }
   const parts = line.split(/\*\*(.+?)\*\*/);
   return (
-    <div className="text-[11px] leading-relaxed" style={{ color: 'var(--t-text2, var(--tx-2))' }}>
+    <div className="insight-body-line">
       {parts.map((part, j) =>
         j % 2 === 0
           ? part
-          : <strong key={j} className="font-medium" style={{ color: 'var(--t-text, var(--tx-1))' }}>{part}</strong>,
+          : <strong key={j}>{part}</strong>,
       )}
       {streaming && (
         <span
@@ -957,7 +954,7 @@ export default function InsightPanel({
         {!content && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="text-4xl mb-3" style={{ color: 'var(--t-gold)', opacity: 0.1 }}>✦</div>
-            <p className="text-[10px] animate-pulse" style={{ color: 'var(--t-faint)' }}>命格解读生成中…</p>
+            <p className="insight-loading-text animate-pulse">命格解读生成中…</p>
           </div>
         )}
         {content && activeTopic === 'overview' && !followUpLoading && !content.startsWith('正在生成') && (
@@ -976,8 +973,8 @@ export default function InsightPanel({
             {headline && (
               <h2 className="insight-headline">{headline}</h2>
             )}
-            <div className="text-[9px] tracking-widest mb-2 flex items-center gap-1.5" style={{ color: 'var(--t-faint)' }}>
-              <span style={{ color: 'var(--t-gold)', opacity: 0.4 }}>✦</span>
+            <div className="insight-kicker mb-2 flex items-center gap-1.5">
+              <span className="insight-kicker-mark">✦</span>
               命理解读
             </div>
             <AiContent text={content} streaming={followUpLoading} />

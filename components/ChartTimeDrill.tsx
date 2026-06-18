@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import type { ZiweiChart } from '@/lib/ziwei/types';
 import type { TimeView } from './TimeNav';
 import { BRANCHES, STEMS } from '@/lib/ziwei/constants';
@@ -54,12 +55,14 @@ function DrillSection({
   hint,
   tone = 'default',
   first = false,
+  scrollRef,
   children,
 }: {
   title: string;
   hint: string;
   tone?: 'default' | 'purple';
   first?: boolean;
+  scrollRef?: React.RefObject<HTMLDivElement | null>;
   children: React.ReactNode;
 }) {
   return (
@@ -68,7 +71,7 @@ function DrillSection({
         <span className={`chart-time-section-title chart-time-section-title--${tone}`}>{title}</span>
         <span className="chart-time-section-hint">{hint}</span>
       </div>
-      <div className="chart-time-scroll">
+      <div className="chart-time-scroll" ref={scrollRef}>
         <div className="chart-time-row-inner">{children}</div>
       </div>
     </div>
@@ -125,14 +128,29 @@ export default function ChartTimeDrill({
 }: ChartTimeDrillProps) {
   const yearOptions = liunianYearsForDaxian(chart);
   const currentYear = new Date().getFullYear();
+  const daxianScrollRef = useRef<HTMLDivElement>(null);
+  const liunianScrollRef = useRef<HTMLDivElement>(null);
+
+  const usesLiunianYear = view === 'liunian' || view === 'liuyue' || view === 'liuri' || view === 'liushi';
+  const highlightLiunianYear = usesLiunianYear ? liunianYear : currentYear;
+
+  useEffect(() => {
+    const scrollActiveIntoView = (container: HTMLDivElement | null) => {
+      if (!container) return;
+      const active = container.querySelector('.chart-time-card--active');
+      active?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    };
+    scrollActiveIntoView(daxianScrollRef.current);
+    scrollActiveIntoView(liunianScrollRef.current);
+  }, [chart.currentDaXianIndex, highlightLiunianYear]);
 
   return (
     <div className="chart-time-drill">
-      <DrillSection title="大限" hint="金色为当前大限 · 点击切换" first>
+      <DrillSection title="大限" hint="金色为当前大限 · 点击切换" first scrollRef={daxianScrollRef}>
         {chart.daXians.map((dx, i) => (
           <DrillCard
             key={`${dx.startAge}-${dx.palaceBranch}`}
-            active={view === 'daxian' && i === chart.currentDaXianIndex}
+            active={i === chart.currentDaXianIndex}
             ariaLabel={`大限 ${dx.startAge}~${dx.endAge}岁 ${daxianGanzhi(chart, dx)} ${dx.palaceName}`}
             onClick={() => onViewChange('daxian')}
           >
@@ -143,14 +161,14 @@ export default function ChartTimeDrill({
         ))}
       </DrillSection>
 
-      <DrillSection title="流年" hint="紫色为当前流年 · 点击任一年切换" tone="purple">
+      <DrillSection title="流年" hint="紫色为当前流年 · 点击任一年切换" tone="purple" scrollRef={liunianScrollRef}>
         {(yearOptions.length > 0 ? yearOptions : Array.from({ length: 10 }, (_, i) => currentYear - 4 + i)).map(y => {
           const ganzhi = getTemporalGanzhiInfo(y, 6, 1);
           const age = virtualAge(chart.birthInfo.year, y);
           return (
             <DrillCard
               key={y}
-              active={view === 'liunian' && liunianYear === y}
+              active={y === highlightLiunianYear}
               tone="purple"
               minWidth={58}
               ariaLabel={`切换到 ${y} 年流年`}
