@@ -26,6 +26,7 @@ export interface Star {
   type: 'major' | 'minor' | 'lucky' | 'sha';
   siHua?: SiHua;
   brightness?: 'bright' | 'normal' | 'dim';  // 庙旺利陷
+  brightnessLabel?: string;                  // 原始亮度字（庙/旺/利/陷/不/平）
 }
 
 export interface SelfSihuaMark {
@@ -78,6 +79,7 @@ export interface DaXian {
 export interface ZiweiChart {
   birthInfo: BirthInfo;
   lunarInfo: LunarInfo;
+  birthPillars?: [string, string, string, string];
   mingGongBranch: number;    // 命宫地支
   shenGongBranch: number;    // 身宫地支
   wuxingJu: number;          // 五行局 (2,3,4,5,6)

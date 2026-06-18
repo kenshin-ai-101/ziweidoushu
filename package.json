@@ -9,6 +9,7 @@
     "start": "next start",
     "build:cf": "npx @cloudflare/next-on-pages",
     "preview:cf": "npx wrangler pages dev",
+    "smoke:chart": "node scripts/smoke-chart-flow.mjs",
     "prepare": "husky"
   },
   "dependencies": {

@@ -10,7 +10,7 @@ const LevelStyle = {
   caution:   { dot: 'bg-orange-500', label: 'text-orange-500', badge: 'text-orange-500 bg-orange-500/10 border-orange-500/25' },
 };
 
-export default function PatternsCard({ chart }: { chart: ZiweiChart }) {
+export default function PatternsCard({ chart, embedded }: { chart: ZiweiChart; embedded?: boolean }) {
   const patterns = detectPatterns(chart);
   if (patterns.length === 0) return null;
 
@@ -19,7 +19,7 @@ export default function PatternsCard({ chart }: { chart: ZiweiChart }) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="card-glass rounded-xl p-4 mb-4"
+      className={embedded ? 'chart-pattern-detail' : 'card-glass rounded-xl p-4 mb-4'}
     >
       <div className="text-[10px] tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--t-faint)' }}>
         <span style={{ color: 'var(--t-gold)', opacity: 0.6 }}>◉</span>

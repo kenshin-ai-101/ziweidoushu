@@ -10,6 +10,8 @@ interface Message {
 
 interface ChatPanelProps {
   chart: ZiweiChart;
+  /** 嵌入 insight-panel-root 时使用，去掉外层 card 样式 */
+  embedded?: boolean;
 }
 
 const PRESET_QUESTIONS = [
@@ -21,7 +23,7 @@ const PRESET_QUESTIONS = [
   '今年的流年运势如何？',
 ];
 
-export default function ChatPanel({ chart }: ChatPanelProps) {
+export default function ChatPanel({ chart, embedded }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -89,21 +91,36 @@ export default function ChatPanel({ chart }: ChatPanelProps) {
   };
 
   return (
-    <div className="flex flex-col h-full rounded-xl overflow-hidden card-glass">
-      {/* 标题 */}
+    <div className={embedded ? 'insight-chat-embedded insight-chat-layout' : 'flex flex-col h-full rounded-xl overflow-hidden card-glass'}>
+      {embedded ? (
+        <aside className="insight-chat-sidebar">
+          <button
+            type="button"
+            className="insight-chat-new"
+            onClick={() => setMessages([])}
+            disabled={loading}
+          >
+            + 新对话
+          </button>
+          <p className="insight-chat-sidebar-empty">历史对话将显示在这里</p>
+        </aside>
+      ) : null}
+
+      <div className={embedded ? 'insight-chat-main' : 'flex flex-col h-full min-h-0 flex-1'}>
+      {!embedded && (
       <div className="px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid var(--t-border)' }}>
         <h3 className="text-xs font-medium tracking-widest" style={{ color: 'var(--t-gold)' }}>AI 命盘解读</h3>
         <p className="text-[10px] mt-0.5" style={{ color: 'var(--t-faint)' }}>倪海夏正宗紫微斗数 · 智慧解析</p>
       </div>
+      )}
 
       {/* 消息列表 */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+      <div ref={scrollRef} className={embedded ? 'insight-chat-messages p-4 space-y-3 flex-1 overflow-y-auto min-h-0' : 'flex-1 overflow-y-auto p-4 space-y-3 min-h-0'}>
         {messages.length === 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-8">
             <div className="text-4xl mb-3" style={{ color: 'var(--t-gold)', opacity: 0.15 }}>✦</div>
             <p className="text-xs leading-relaxed" style={{ color: 'var(--t-faint)' }}>
-              命盘已生成，可直接提问<br />
-              或从下方选择常见问题开始解读
+              {embedded ? '问我关于这张盘的任何事' : <>命盘已生成，可直接提问<br />或从下方选择常见问题开始解读</>}
             </p>
           </motion.div>
         )}
@@ -175,14 +192,14 @@ export default function ChatPanel({ chart }: ChatPanelProps) {
       )}
 
       {/* 输入框 */}
-      <div className="px-3 pb-3 pt-2 flex-shrink-0" style={{ borderTop: '1px solid var(--t-border)' }}>
+      <div className={embedded ? 'insight-ai-input' : 'px-3 pb-3 pt-2 flex-shrink-0'} style={embedded ? undefined : { borderTop: '1px solid var(--t-border)' }}>
         <div className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage(input)}
-            placeholder="输入问题，如：我的感情运势如何？"
+            placeholder={embedded ? '继续追问，如：今年的事业格局有什么特点？' : '输入问题，如：我的感情运势如何？'}
             disabled={loading}
             className="flex-1 rounded-lg px-3 py-2 text-xs focus:outline-none transition-colors"
             style={{
@@ -201,9 +218,10 @@ export default function ChatPanel({ chart }: ChatPanelProps) {
               color: 'var(--t-gold)',
             }}
           >
-            解读
+            {embedded ? '发送' : '解读'}
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

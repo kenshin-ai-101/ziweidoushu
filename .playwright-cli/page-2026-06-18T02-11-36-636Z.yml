@@ -1,0 +1,348 @@
+- generic [active] [ref=e1]:
+  - link "跳转到主要内容" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e5]:
+    - banner:
+      - link "回到首页" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: METIS
+      - generic [ref=e9]:
+        - link "起盘" [ref=e11] [cursor=pointer]:
+          - /url: /chart
+        - generic [ref=e12]:
+          - generic [ref=e13]: ·
+          - link "合盘" [ref=e14] [cursor=pointer]:
+            - /url: /heming
+        - button "普通版" [ref=e15] [cursor=pointer]
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: 01 / DESTINY ENGINE
+        - heading "起紫微命盘" [level=1] [ref=e19]
+        - paragraph [ref=e20]: 输入出生年月日时 · 以公历为准
+      - generic [ref=e22]:
+        - heading "── 输入生辰八字 ──" [level=3] [ref=e23]
+        - generic [ref=e29]:
+          - generic [ref=e30]: 姓名（可选）
+          - textbox "姓名（可选）" [ref=e31]:
+            - /placeholder: 请输入姓名
+        - generic [ref=e32]:
+          - generic [ref=e33]:
+            - generic [ref=e34]: 出生日期（公历）
+            - generic [ref=e35]:
+              - button "公历" [ref=e36] [cursor=pointer]
+              - button "农历" [ref=e37] [cursor=pointer]
+          - generic [ref=e38]:
+            - combobox "出生日期（公历）" [ref=e40]:
+              - option "年份" [selected]
+              - option "2026"
+              - option "2025"
+              - option "2024"
+              - option "2023"
+              - option "2022"
+              - option "2021"
+              - option "2020"
+              - option "2019"
+              - option "2018"
+              - option "2017"
+              - option "2016"
+              - option "2015"
+              - option "2014"
+              - option "2013"
+              - option "2012"
+              - option "2011"
+              - option "2010"
+              - option "2009"
+              - option "2008"
+              - option "2007"
+              - option "2006"
+              - option "2005"
+              - option "2004"
+              - option "2003"
+              - option "2002"
+              - option "2001"
+              - option "2000"
+              - option "1999"
+              - option "1998"
+              - option "1997"
+              - option "1996"
+              - option "1995"
+              - option "1994"
+              - option "1993"
+              - option "1992"
+              - option "1991"
+              - option "1990"
+              - option "1989"
+              - option "1988"
+              - option "1987"
+              - option "1986"
+              - option "1985"
+              - option "1984"
+              - option "1983"
+              - option "1982"
+              - option "1981"
+              - option "1980"
+              - option "1979"
+              - option "1978"
+              - option "1977"
+              - option "1976"
+              - option "1975"
+              - option "1974"
+              - option "1973"
+              - option "1972"
+              - option "1971"
+              - option "1970"
+              - option "1969"
+              - option "1968"
+              - option "1967"
+              - option "1966"
+              - option "1965"
+              - option "1964"
+              - option "1963"
+              - option "1962"
+              - option "1961"
+              - option "1960"
+              - option "1959"
+              - option "1958"
+              - option "1957"
+              - option "1956"
+              - option "1955"
+              - option "1954"
+              - option "1953"
+              - option "1952"
+              - option "1951"
+              - option "1950"
+              - option "1949"
+              - option "1948"
+              - option "1947"
+              - option "1946"
+              - option "1945"
+              - option "1944"
+              - option "1943"
+              - option "1942"
+              - option "1941"
+              - option "1940"
+              - option "1939"
+              - option "1938"
+              - option "1937"
+              - option "1936"
+              - option "1935"
+              - option "1934"
+              - option "1933"
+              - option "1932"
+              - option "1931"
+              - option "1930"
+              - option "1929"
+              - option "1928"
+              - option "1927"
+              - option "1926"
+              - option "1925"
+              - option "1924"
+              - option "1923"
+              - option "1922"
+              - option "1921"
+              - option "1920"
+              - option "1919"
+              - option "1918"
+              - option "1917"
+              - option "1916"
+              - option "1915"
+              - option "1914"
+              - option "1913"
+              - option "1912"
+              - option "1911"
+              - option "1910"
+              - option "1909"
+              - option "1908"
+              - option "1907"
+              - option "1906"
+              - option "1905"
+              - option "1904"
+              - option "1903"
+              - option "1902"
+              - option "1901"
+              - option "1900"
+            - combobox "出生月份" [ref=e42]:
+              - option "月份" [selected]
+              - option "1 月"
+              - option "2 月"
+              - option "3 月"
+              - option "4 月"
+              - option "5 月"
+              - option "6 月"
+              - option "7 月"
+              - option "8 月"
+              - option "9 月"
+              - option "10 月"
+              - option "11 月"
+              - option "12 月"
+            - combobox "出生日期" [ref=e44]:
+              - option "日期" [selected]
+              - option "1 日"
+              - option "2 日"
+              - option "3 日"
+              - option "4 日"
+              - option "5 日"
+              - option "6 日"
+              - option "7 日"
+              - option "8 日"
+              - option "9 日"
+              - option "10 日"
+              - option "11 日"
+              - option "12 日"
+              - option "13 日"
+              - option "14 日"
+              - option "15 日"
+              - option "16 日"
+              - option "17 日"
+              - option "18 日"
+              - option "19 日"
+              - option "20 日"
+              - option "21 日"
+              - option "22 日"
+              - option "23 日"
+              - option "24 日"
+              - option "25 日"
+              - option "26 日"
+              - option "27 日"
+              - option "28 日"
+              - option "29 日"
+              - option "30 日"
+              - option "31 日"
+        - generic [ref=e45]:
+          - generic [ref=e46]: 出生地点（用于真太阳时校正）
+          - button "选择出生地（用于真太阳时校正） ▼" [ref=e48] [cursor=pointer]:
+            - generic [ref=e49]: 选择出生地（用于真太阳时校正）
+            - generic [ref=e50]: ▼
+        - generic [ref=e51]:
+          - generic [ref=e52]: 出生时间（北京时间）
+          - generic [ref=e53]:
+            - generic [ref=e54]:
+              - combobox "出生时间（北京时间）" [ref=e55]:
+                - option "00 时"
+                - option "01 时"
+                - option "02 时"
+                - option "03 时"
+                - option "04 时"
+                - option "05 时"
+                - option "06 时"
+                - option "07 时"
+                - option "08 时" [selected]
+                - option "09 时"
+                - option "10 时"
+                - option "11 时"
+                - option "12 时"
+                - option "13 时"
+                - option "14 时"
+                - option "15 时"
+                - option "16 时"
+                - option "17 时"
+                - option "18 时"
+                - option "19 时"
+                - option "20 时"
+                - option "21 时"
+                - option "22 时"
+                - option "23 时"
+              - combobox "出生分钟" [ref=e56]:
+                - option "00 分" [selected]
+                - option "01 分"
+                - option "02 分"
+                - option "03 分"
+                - option "04 分"
+                - option "05 分"
+                - option "06 分"
+                - option "07 分"
+                - option "08 分"
+                - option "09 分"
+                - option "10 分"
+                - option "11 分"
+                - option "12 分"
+                - option "13 分"
+                - option "14 分"
+                - option "15 分"
+                - option "16 分"
+                - option "17 分"
+                - option "18 分"
+                - option "19 分"
+                - option "20 分"
+                - option "21 分"
+                - option "22 分"
+                - option "23 分"
+                - option "24 分"
+                - option "25 分"
+                - option "26 分"
+                - option "27 分"
+                - option "28 分"
+                - option "29 分"
+                - option "30 分"
+                - option "31 分"
+                - option "32 分"
+                - option "33 分"
+                - option "34 分"
+                - option "35 分"
+                - option "36 分"
+                - option "37 分"
+                - option "38 分"
+                - option "39 分"
+                - option "40 分"
+                - option "41 分"
+                - option "42 分"
+                - option "43 分"
+                - option "44 分"
+                - option "45 分"
+                - option "46 分"
+                - option "47 分"
+                - option "48 分"
+                - option "49 分"
+                - option "50 分"
+                - option "51 分"
+                - option "52 分"
+                - option "53 分"
+                - option "54 分"
+                - option "55 分"
+                - option "56 分"
+                - option "57 分"
+                - option "58 分"
+                - option "59 分"
+            - generic [ref=e57]:
+              - text: 真太阳时 →
+              - generic [ref=e58]: 辰时
+              - generic [ref=e59]: （07:00-09:00）
+          - generic [ref=e60] [cursor=pointer]:
+            - checkbox "不知道出生时间，以子时（23:00–01:00）起盘" [ref=e61]
+            - generic [ref=e62]: 不知道出生时间，以子时（23:00–01:00）起盘
+        - generic [ref=e63]:
+          - generic [ref=e64]: 性别
+          - group "性别" [ref=e65]:
+            - button "♂ 男" [pressed] [ref=e66] [cursor=pointer]
+            - button "♀ 女" [ref=e67] [cursor=pointer]
+        - button "立即起盘 · 查看命盘解析" [ref=e68] [cursor=pointer]
+      - generic [ref=e69]:
+        - generic [ref=e70]: 登录后自动保存命盘 · 换设备也能看记录
+        - generic [ref=e71]: 未登录时排盘不会保存，刷新即失
+    - contentinfo [ref=e72]:
+      - generic [ref=e74]:
+        - link "隐私政策" [ref=e75] [cursor=pointer]:
+          - /url: /privacy
+        - generic [ref=e76]: ·
+        - link "服务条款" [ref=e77] [cursor=pointer]:
+          - /url: /terms
+        - generic [ref=e78]: ·
+        - link "违法和不良信息举报" [ref=e79] [cursor=pointer]:
+          - /url: mailto:feedback@wdyziweidoushu666.com?subject=违法和不良信息举报
+        - generic [ref=e80]: ·
+        - link "12377 举报" [ref=e81] [cursor=pointer]:
+          - /url: https://www.12377.cn/
+      - generic [ref=e82]:
+        - paragraph [ref=e83]: 本平台基于中国传统文化研究，仅供学习参考，不构成医疗、投资、婚姻、法律或重大决策建议。AI 输出非医疗诊断。
+        - paragraph [ref=e84]:
+          - link "京ICP备2026027116号" [ref=e85] [cursor=pointer]:
+            - /url: https://beian.miit.gov.cn/
+          - text: ·
+          - link "京公网安备11010502061088号" [ref=e86] [cursor=pointer]:
+            - /url: http://www.beian.gov.cn/portal/registerSystemInfo
+          - text: ·©2026 Metis
+        - paragraph [ref=e87]:
+          - text: 主办主体：两江新区旺多鱼网络科技工作室（个体工商户） · 客服：
+          - link "wdy778@outlook.com" [ref=e88] [cursor=pointer]:
+            - /url: mailto:wdy778@outlook.com
+  - alert [ref=e89]

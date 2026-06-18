@@ -3,6 +3,7 @@ import {
   getAnalysisText,
   type TopicKey,
 } from './db-analysis';
+import { buildOverviewAnalysisText } from './overview-analysis';
 
 /** 命宫主星（空宫则取借星） */
 export function getMingGongMainStars(chart: ZiweiChart): string[] {
@@ -17,11 +18,14 @@ export function getMingGongMainStar(chart: ZiweiChart): string | null {
   return getMingGongMainStars(chart)[0] ?? null;
 }
 
-/** 按命宫主星 + topic 取 STAR_DB 论断（与生产 /api/analysis db 路径一致） */
+/** 按命宫主星 + topic 取 STAR_DB 论断；overview 走生产全文组装 */
 export function buildChartAnalysisText(
   chart: ZiweiChart,
   topic: TopicKey,
 ): string {
+  if (topic === 'overview') {
+    return buildOverviewAnalysisText(chart);
+  }
   const star = getMingGongMainStar(chart);
   if (!star) {
     return '未能识别命宫主星，请重新起盘后再试。';

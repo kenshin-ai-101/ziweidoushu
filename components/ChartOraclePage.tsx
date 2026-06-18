@@ -1,16 +1,27 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import BirthForm, { type BirthFormState } from '@/components/BirthForm';
 import ChartBoard from '@/components/ChartBoard';
+import ChartTopbar from '@/components/ChartTopbar';
+import ChartTimeDrill from '@/components/ChartTimeDrill';
 import InsightPanel from '@/components/InsightPanel';
 import ShareModal from '@/components/ShareModal';
-import PatternsCard from '@/components/PatternsCard';
+import FamousPersonCard from '@/components/FamousPersonCard';
+import PatternsLink from '@/components/PatternsLink';
 import { OracleChrome, OracleHero } from '@/components/OracleSubpage';
-import { generateChart } from '@/lib/ziwei/algorithm';
 import { formToSearchParams, searchParamsToForm, formToBirthInfo } from '@/lib/ziwei/share';
 import { useHistory } from '@/lib/ziwei/history';
-import type { Palace, Star, ZiweiChart } from '@/lib/ziwei/types';
+import { findFamousPersonMatch } from '@/lib/ziwei/famous';
+import {
+  DEFAULT_WENMO_CONFIG,
+  loadStoredWenmoConfig,
+  saveStoredWenmoConfig,
+  searchParamsToWenmoConfig,
+  wenmoConfigToSearchParams,
+  type WenmoConfig,
+} from '@/lib/ziwei/school-config';
+import type { BirthInfo, Palace, Star, ZiweiChart } from '@/lib/ziwei/types';
 import type { TimeView } from '@/components/TimeNav';
 
 interface SelectedSiHua {
@@ -30,6 +41,10 @@ export function ChartOraclePage() {
   const [savedForm, setSavedForm] = useState<BirthFormState | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState('');
+  const [wenmoConfig, setWenmoConfig] = useState<WenmoConfig>(DEFAULT_WENMO_CONFIG);
+  const latestFormRef = useRef<BirthFormState | null>(null);
 
   const [selectedPalace, setSelectedPalace] = useState<Palace | null>(null);
   const [selectedSiHua, setSelectedSiHua] = useState<SelectedSiHua | null>(null);
@@ -42,18 +57,60 @@ export function ChartOraclePage() {
 
   const { save: saveHistory, syncCloud } = useHistory();
 
-  const loadChart = useCallback((info: Parameters<typeof generateChart>[0]) => {
-    const data = generateChart(info);
-    setChart(data);
-    setSelectedPalace(null);
-    setSelectedSiHua(null);
-    setTimeView('mingpan');
-    setLiushiHour(getCurrentShichenBranch());
+  const buildChartUrl = useCallback((form: BirthFormState, config: WenmoConfig) => {
+    const params = formToSearchParams(form);
+    for (const [key, value] of Object.entries(wenmoConfigToSearchParams(config))) {
+      params.set(key, value);
+    }
+    return `/chart?${params.toString()}`;
   }, []);
+
+  const loadChart = useCallback(async (info: BirthInfo, sourceForm: BirthFormState | undefined, config: WenmoConfig) => {
+    setGenerating(true);
+    setGenerateError('');
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...info,
+          brightnessSchool: config.brightnessSchool,
+          wenmoConfig: config,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || '命盘生成失败');
+      }
+      const data = await res.json() as ZiweiChart;
+      setChart(data);
+      setSelectedPalace(null);
+      setSelectedSiHua(null);
+      setTimeView('mingpan');
+      setLiushiHour(getCurrentShichenBranch());
+      if (sourceForm) {
+        saveHistory(sourceForm);
+        syncCloud(sourceForm);
+        if (typeof window !== 'undefined') {
+          window.history.replaceState({}, '', buildChartUrl(sourceForm, config));
+        }
+      }
+      if (typeof window !== 'undefined') {
+        window.setTimeout(() => window.scrollTo({ top: 0, behavior: 'auto' }), 60);
+      }
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : '生成失败，请重试');
+    } finally {
+      setGenerating(false);
+    }
+  }, [buildChartUrl, saveHistory, syncCloud]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
+    const config = params.toString() ? searchParamsToWenmoConfig(params) : loadStoredWenmoConfig();
+    setWenmoConfig(config);
+    saveStoredWenmoConfig(config);
     const formData = searchParamsToForm(params);
     if (!formData?.year) return;
     const fullForm: BirthFormState = {
@@ -63,24 +120,44 @@ export function ChartOraclePage() {
       calendarType: 'solar',
       ...formData,
     };
+    latestFormRef.current = fullForm;
     setSavedForm(fullForm);
-    loadChart(formToBirthInfo(fullForm));
+    void loadChart(formToBirthInfo(fullForm), fullForm, config);
   }, [loadChart]);
 
   const handleFormSave = (form: BirthFormState) => {
+    latestFormRef.current = form;
     setSavedForm(form);
     if (form.year && form.month && form.day) {
       saveHistory(form);
       syncCloud(form);
       const params = formToSearchParams(form);
       if (typeof window !== 'undefined') {
+        for (const [key, value] of Object.entries(wenmoConfigToSearchParams(wenmoConfig))) {
+          params.set(key, value);
+        }
         window.history.replaceState({}, '', `/chart?${params.toString()}`);
       }
     }
   };
 
-  const handleSubmit = (info: Parameters<typeof generateChart>[0]) => {
-    loadChart(info);
+  const handleSubmit = (info: BirthInfo) => {
+    void loadChart(info, latestFormRef.current ?? savedForm ?? undefined, wenmoConfig);
+  };
+
+  const handleSchoolConfigChange = (config: WenmoConfig) => {
+    setWenmoConfig(config);
+    saveStoredWenmoConfig(config);
+    if (typeof window !== 'undefined' && savedForm) {
+      window.history.replaceState({}, '', buildChartUrl(savedForm, config));
+    }
+  };
+
+  const handleSchoolConfigApply = (config: WenmoConfig) => {
+    handleSchoolConfigChange(config);
+    if (savedForm) {
+      void loadChart(formToBirthInfo(savedForm), savedForm, config);
+    }
   };
 
   const handleReset = () => {
@@ -88,6 +165,8 @@ export function ChartOraclePage() {
     setSavedForm(null);
     setSelectedPalace(null);
     setSelectedSiHua(null);
+    setGenerateError('');
+    setGenerating(false);
     setFormKey(k => k + 1);
     if (typeof window !== 'undefined') {
       window.history.replaceState({}, '', '/chart');
@@ -95,31 +174,58 @@ export function ChartOraclePage() {
   };
 
   const shareUrl = savedForm && typeof window !== 'undefined'
-    ? `${window.location.origin}/chart?${formToSearchParams(savedForm).toString()}`
+    ? `${window.location.origin}${buildChartUrl(savedForm, wenmoConfig)}`
     : '';
+
+  const famousPerson = useMemo(() => {
+    if (!chart) return null;
+    return findFamousPersonMatch({
+      name: chart.birthInfo.name,
+      year: chart.birthInfo.year,
+      month: chart.birthInfo.month,
+      day: chart.birthInfo.day,
+    });
+  }, [chart]);
+
+  useEffect(() => {
+    if (!chart) return;
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.style.background = '#fafafa';
+    document.body.style.background = '#fafafa';
+  }, [chart]);
 
   if (chart) {
     return (
-      <OracleChrome tone="gold" compact>
-        <section className="oracle-chart-workspace">
-          <div className="oracle-chart-main">
-            <div className="oracle-chart-toolbar">
-              <button className="oracle-back-home" type="button" onClick={handleReset}>
-                ← 重新起盘
-              </button>
-              {savedForm && (
-                <button
-                  type="button"
-                  className="oracle-share-btn"
-                  onClick={() => setShareModalOpen(true)}
-                >
-                  分享命盘
-                </button>
-              )}
-            </div>
+      <div className="chart-page-root">
+        <ChartTopbar
+          chart={chart}
+          view={timeView}
+          liunianYear={liunianYear}
+          liuyueMonth={liuyueMonth}
+          liuriDay={liuriDay}
+          liushiHour={liushiHour}
+          onViewChange={v => {
+            setTimeView(v);
+            setSelectedPalace(null);
+            setSelectedSiHua(null);
+          }}
+          onYearChange={setLiunianYear}
+          onMonthChange={setLiuyueMonth}
+          onDayChange={setLiuriDay}
+          onHourChange={setLiushiHour}
+          onBack={handleReset}
+          onShare={savedForm ? () => setShareModalOpen(true) : undefined}
+          schoolConfig={wenmoConfig}
+          onSchoolConfigChange={handleSchoolConfigChange}
+          onSchoolConfigApply={handleSchoolConfigApply}
+        />
 
+        <div className="chart-workspace">
+          <div className="chart-workspace-left">
             <ChartBoard
               chart={chart}
+              variant="production"
+              hideTimeNav
               timeView={timeView}
               liunianYear={liunianYear}
               liuyueMonth={liuyueMonth}
@@ -138,21 +244,52 @@ export function ChartOraclePage() {
                 setSelectedSiHua({ starName, siHua, view });
               }}
             />
-
-            <PatternsCard chart={chart} />
+            <PatternsLink chart={chart} />
+            <ChartTimeDrill
+              chart={chart}
+              view={timeView}
+              liunianYear={liunianYear}
+              liuyueMonth={liuyueMonth}
+              liuriDay={liuriDay}
+              liushiHour={liushiHour}
+              onViewChange={v => {
+                setTimeView(v);
+                setSelectedPalace(null);
+                setSelectedSiHua(null);
+              }}
+              onYearChange={setLiunianYear}
+              onMonthChange={setLiuyueMonth}
+              onDayChange={setLiuriDay}
+              onHourChange={setLiushiHour}
+            />
+            <div className="chart-reset-wrap">
+              <button type="button" className="chart-reset-btn" onClick={handleReset}>
+                重新起盘
+              </button>
+            </div>
           </div>
 
-          <InsightPanel
-            chart={chart}
-            timeView={timeView}
-            liunianYear={liunianYear}
-            liuyueMonth={liuyueMonth}
-            liuriDay={liuriDay}
-            liushiHour={liushiHour}
-            selectedPalace={selectedPalace}
-            selectedSiHua={selectedSiHua}
-          />
-        </section>
+          <div className="chart-workspace-right">
+            {famousPerson && (
+              <div className="chart-workspace-stickytop">
+                <FamousPersonCard person={famousPerson} />
+              </div>
+            )}
+            <div className="chart-workspace-insight">
+              <InsightPanel
+                chart={chart}
+                timeView={timeView}
+                liunianYear={liunianYear}
+                liuyueMonth={liuyueMonth}
+                liuriDay={liuriDay}
+                liushiHour={liushiHour}
+                selectedPalace={selectedPalace}
+                selectedSiHua={selectedSiHua}
+                onExport={savedForm ? () => setShareModalOpen(true) : undefined}
+              />
+            </div>
+          </div>
+        </div>
 
         {savedForm && (
           <ShareModal
@@ -171,7 +308,19 @@ export function ChartOraclePage() {
             }}
           />
         )}
-      </OracleChrome>
+        <div className="chart-bottom-disclaimer" aria-hidden="true">
+          AI 解读仅供学习参考，不构成医疗、投资、婚姻或法律建议
+        </div>
+      </div>
+    );
+  }
+
+  if (generating) {
+    return (
+      <div className="chart-generating-screen">
+        <div className="chart-generating-spinner" aria-hidden />
+        <div>正在排盘…</div>
+      </div>
     );
   }
 
@@ -195,6 +344,11 @@ export function ChartOraclePage() {
               onFormSave={handleFormSave}
               initialData={savedForm ?? undefined}
             />
+            {generateError && (
+              <div className="chart-generate-error" role="alert">
+                {generateError}
+              </div>
+            )}
           </div>
         </div>
 

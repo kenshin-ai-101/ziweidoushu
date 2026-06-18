@@ -134,3 +134,18 @@ export function getFamousByCategory(category: FamousPerson['category']): FamousP
 export const FAMOUS_CATEGORIES: FamousPerson['category'][] = [
   '商业', '文艺', '科技', '体育',
 ];
+
+/** 按出生信息匹配名人命盘（与生产 chart 页 stickytop 逻辑一致） */
+export function findFamousPersonMatch(birth: {
+  name?: string;
+  year: number;
+  month: number;
+  day: number;
+}): FamousPerson | null {
+  return FAMOUS_PERSONS.find(p =>
+    p.year === birth.year &&
+    p.month === birth.month &&
+    p.day === birth.day &&
+    (!birth.name || p.name === birth.name),
+  ) ?? null;
+}

@@ -71,7 +71,8 @@ export const CHART_TOPIC_TABS_EXTENDED: { key: TopicKey; label: string }[] = [
 
 export const CHART_TOPIC_TABS_ALL = [...CHART_TOPIC_TABS_MAIN, ...CHART_TOPIC_TABS_EXTENDED];
 
-export const FREE_TOPIC_KEYS = new Set(CHART_TOPIC_TABS_MAIN.map(t => t.key));
+/** @deprecated 本地复刻已全部开放，保留兼容旧引用 */
+export const FREE_TOPIC_KEYS = new Set(CHART_TOPIC_TABS_ALL.map(t => t.key));
 
 /** 生产 chart 页 e4 — 宫位主管领域 */
 export const PALACE_ROLES: Record<string, string> = {
@@ -105,6 +106,7 @@ export const COLLAPSIBLE_SECTION_TITLES = [
   '命盘依据',
   '经典出处',
   '主辅煞组合',
+  '主辅煞组合精细论断',
   '倪师人纪方案',
   '十四主星速查',
   '14 主星速查',
