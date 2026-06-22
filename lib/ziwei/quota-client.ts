@@ -1,4 +1,11 @@
-import { FREE_DAILY_QUOTA, getBeijingDateKey } from '@/lib/ai/quota';
+import {
+  FREE_DAILY_QUOTA,
+  QUOTA_COOKIE_NAME,
+  getBeijingDateKey,
+  getQuotaRemaining,
+  parseQuotaState,
+  readBrowserCookie,
+} from '@/lib/ai/quota';
 
 const MIRROR_KEY = 'ai_quota_mirror';
 export const QUOTA_UPDATE_EVENT = 'ziwei-quota-update';
@@ -8,24 +15,13 @@ interface QuotaMirror {
   remaining: number;
 }
 
-function readMirror(): QuotaMirror | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(MIRROR_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as QuotaMirror;
-    if (typeof parsed.remaining !== 'number' || typeof parsed.date !== 'string') return null;
-    return parsed;
-  } catch {
-    return null;
-  }
+export function resolveQuotaRemaining(cookieRaw?: string): number {
+  return getQuotaRemaining(parseQuotaState(cookieRaw));
 }
 
 export function getClientQuotaRemaining(): number {
-  const mirror = readMirror();
-  const today = getBeijingDateKey();
-  if (mirror?.date === today) return Math.max(0, mirror.remaining);
-  return FREE_DAILY_QUOTA;
+  if (typeof window === 'undefined') return FREE_DAILY_QUOTA;
+  return resolveQuotaRemaining(readBrowserCookie(QUOTA_COOKIE_NAME));
 }
 
 export function syncQuotaRemaining(remaining: number) {
@@ -50,4 +46,9 @@ export function subscribeQuotaRemaining(onChange: (remaining: number) => void): 
   };
   window.addEventListener(QUOTA_UPDATE_EVENT, handler);
   return () => window.removeEventListener(QUOTA_UPDATE_EVENT, handler);
+}
+
+/** For useSyncExternalStore — notify when mirror changes without passing the value. */
+export function subscribeQuotaStore(onStoreChange: () => void): () => void {
+  return subscribeQuotaRemaining(() => onStoreChange());
 }

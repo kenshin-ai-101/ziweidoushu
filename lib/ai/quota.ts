@@ -20,6 +20,17 @@ export function getBeijingDateKey(now = new Date()): string {
   }).format(now);
 }
 
+/** Read a non-HttpOnly cookie in the browser. */
+export function readBrowserCookie(name: string): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const prefix = `${name}=`;
+  for (const part of document.cookie.split(';')) {
+    const trimmed = part.trim();
+    if (trimmed.startsWith(prefix)) return trimmed.slice(prefix.length);
+  }
+  return undefined;
+}
+
 export function parseQuotaState(raw: string | undefined): QuotaState {
   const today = getBeijingDateKey();
   if (!raw) return { date: today, used: 0, bonus: 0 };

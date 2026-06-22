@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { generateChart } from '@/lib/ziwei/algorithm';
 import type { BirthInfo } from '@/lib/ziwei/types';
 
+export const runtime = 'nodejs';
+
 export async function POST(req: NextRequest) {
   try {
     const info = await req.json() as BirthInfo;

@@ -16,9 +16,9 @@ import {
   writeInterpretCache,
   type InterpretMessage,
 } from '@/lib/ziwei/interpret-client';
+import { useQuotaRemaining } from '@/hooks/use-quota-remaining';
 import {
-  getClientQuotaRemaining,
-  subscribeQuotaRemaining,
+  syncQuotaRemaining,
 } from '@/lib/ziwei/quota-client';
 
 interface Message {
@@ -63,9 +63,7 @@ const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatPanel
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [quotaRemaining, setQuotaRemaining] = useState<number>(() =>
-    typeof window === 'undefined' ? 10 : getClientQuotaRemaining(),
-  );
+  const quotaRemaining = useQuotaRemaining();
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<Message[]>([]);
   const loadingRef = useRef(false);
@@ -97,14 +95,9 @@ const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatPanel
     }
   }, []);
 
-  useEffect(() => {
-    setQuotaRemaining(getClientQuotaRemaining());
-    return subscribeQuotaRemaining(setQuotaRemaining);
-  }, []);
-
   const applyQuotaResult = (remaining?: number) => {
     if (remaining != null && Number.isFinite(remaining)) {
-      setQuotaRemaining(Math.max(0, remaining));
+      syncQuotaRemaining(Math.max(0, remaining));
     }
   };
 
