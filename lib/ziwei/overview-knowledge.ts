@@ -40,7 +40,7 @@ export const STAR_BRIGHTNESS_OVERLAY: Partial<Record<string, { bright: string; q
 
 export const SIHUA_EFFECT: Record<string, Partial<Record<'禄' | '权' | '科' | '忌', string>>> = {
   '天机': { 权: '化权，在策划咨询或技术领域有话语权，多变的特质化为强烈的掌控力，执行力提升。' },
-  '天同': { 禄: '精神福气厚，享受人生' },
+  '天同': { 禄: '化禄，福禄双美，生活顺遂安乐，是天同最理想的状态，衣食无忧，幸福感强。' },
   '文昌': { 科: '名声文书与贵人认可增强' },
   '廉贞': { 忌: '阻滞与执念课题在兄弟合伙领域显现' },
 };

@@ -7,13 +7,20 @@ import {
 } from './db-analysis';
 import { COMBO_REGISTRY } from '@/lib/seo/combo';
 import type { ComboTopicContent, ComboTopicKey } from '@/lib/seo/combo-data.generated';
-import { buildOverviewAnalysisText, type OverviewAnalysisOptions } from './overview-analysis';
+import {
+  buildOverviewAnalysisText,
+  buildTemporalSihuaAppendix,
+  type OverviewAnalysisOptions,
+} from './overview-analysis';
 import {
   LUCKY_STAR_PALACE,
   SECOND_MAJOR_DESC,
   SIHUA_EFFECT,
+  SIHUA_PALACE_NOTES,
+  STAR_BRIGHTNESS_OVERLAY,
   STAR_PALACE_LINE,
 } from './overview-knowledge';
+import { lookupTopicStarOverview } from './topic-overview-knowledge';
 import type { Palace, Star } from './types';
 
 const TOPIC_TO_COMBO_TOPIC: Partial<Record<TopicKey, ComboTopicKey>> = {
@@ -28,27 +35,6 @@ const PALACE_NOTE_KEY: Partial<Record<string, keyof typeof LUCKY_STAR_PALACE[str
   财帛: 'caiBo',
   福德: 'fuDe',
   官禄: 'guanLu',
-};
-
-const TOPIC_OVERVIEW_COPY: Partial<Record<TopicKey, Record<string, string>>> = {
-  wealth: {
-    天梁: '这盘财运以清财、专业财为主轴，不以暴富取胜，而是靠学识、服务、口碑和长期信誉慢慢累积。正财来自专业能力的变现，适合顾问咨询、教学培训、医疗法律、写作出版等路径；财富节奏偏慢热，中年后随声誉提升会更稳。守财能力不差，但容易因情义付出或原则过硬错过更好的机会；投资上宜稳健长期，不宜高风险投机。',
-  },
-  career: {
-    '太阳|太阴': '这盘事业一边要名声与公众可见度，一边要财务规划和稳定经营。太阳落陷表示付出多、被看见得慢，太阴庙旺又能补上细腻、资源与长期积累，所以真正适合的是能建立专业形象的平台，而不是长期躲在幕后。贵人与机会多来自有地位的长辈或制度性平台；越重视诚信、口碑和持续曝光，事业越能带动收入。',
-    太阳: '这盘事业重在被看见、被信任、被授权，适合站到台前承担责任，靠公开形象和持续付出来换取位置。太阳的事业路通常先劳后成，早期容易付出多、回报慢，但只要平台够大、口碑够稳，后期会因影响力而打开收入与资源。',
-  },
-  love: {
-    '太阳|太阴': '这盘感情看夫妻宫空宫借对宫日月，关系里既要阳性的热情与担当，也要阴性的照顾与细腻。伴侣多带外向、事业心或公众形象，也可能重体面、重名誉；两人在外容易互相增光，回到关系里反而要学会放下盔甲。亲密关系需要真实与松弛，激情要沉淀成稳定陪伴才走得久。',
-    太阳: '这盘感情需要光明、坦诚和担当，容易被积极、有责任感、带公众形象或事业心的人吸引。关系中的重点不是谁更强，而是能不能在外彼此成就、在内彼此放松；若只维持体面，亲密感会被消耗。',
-  },
-  personality: {
-    天机: '这盘性格核心是聪明、机变、善分析，但也容易想得多、落地慢。兴趣广、入门快，适合参谋、顾问、策划、技术专家这类辅佐型位置；若硬扛一把手，容易被多变和反复评估拖住。中年后的关键不是再学更多，而是收敛到一两件事做深，把灵光变成可交付的本事。',
-  },
-  health: {
-    '紫微|天相': '这盘健康重点在脾胃、中焦与压力管理，其次看心脑血管和睡眠。紫微属土，遇压力、面子受损或长期紧绷时，最容易先反映在消化和胃气上；天相同宫让身体更需要规律、秩序和稳定节奏。养生不宜走极端，饮食七分饱、少酒少油、稳定有氧，40岁后定期关注血压、血脂、血糖和心电图。',
-    紫微: '这盘健康以脾胃、中焦和压力调节为先，越在意责任、名位和掌控感，身体越容易用消化、睡眠或心脑压力提醒你。真正的养生不是猛补猛练，而是规律饮食、稳定作息、适度运动，并在中年后把基础体检固定下来。',
-  },
 };
 
 const TOPIC_OVERVIEW_ACTION: Partial<Record<TopicKey, string>> = {
@@ -73,6 +59,15 @@ interface ParsedDb {
   chuchu: string;
 }
 
+function findPalace(chart: ZiweiChart, branch: number) {
+  return chart.palaces.find(p => p.branch === branch);
+}
+
+function palaceNoteLabel(name: string): string {
+  if (name === '命宫') return '命宫';
+  return name.replace(/宫$/, '');
+}
+
 function palaceByTopic(chart: ZiweiChart, topic: TopicKey) {
   const palaceName = TOPIC_PALACE_NAME[topic];
   return chart.palaces.find(p =>
@@ -89,9 +84,14 @@ function palaceMainStars(palace: ZiweiChart['palaces'][number] | undefined): str
   return palace.borrowedStars ?? [];
 }
 
+function palaceHasEmptyMajors(palace: Palace | undefined): boolean {
+  if (!palace) return true;
+  return palace.isEmpty || !palace.stars.some(s => s.type === 'major');
+}
+
 function oppositePalace(chart: ZiweiChart, palace: Palace | undefined) {
   if (!palace) return undefined;
-  return chart.palaces.find(p => p.branch === (palace.branch + 6) % 12);
+  return findPalace(chart, (palace.branch + 6) % 12);
 }
 
 function brightnessLabel(star: Star): string {
@@ -108,12 +108,28 @@ function formatStarToken(star: Star): string {
   return `${star.name}${star.siHua ? `化${star.siHua}` : ''}（${brightnessLabel(star)}）`;
 }
 
-function formatPalaceMajorStars(palace: Palace | undefined): string {
+function formatStarList(stars: Star[], majorsOnly = false): string {
+  const selected = majorsOnly ? stars.filter(s => s.type === 'major') : stars;
+  if (selected.length === 0) return '无';
+  return selected.map(s => formatStarToken(s)).join('、');
+}
+
+function formatPalaceHeadline(palace: Palace | undefined): string {
   if (!palace) return '未识别';
   const majors = palace.stars.filter(s => s.type === 'major');
-  if (majors.length > 0) return majors.map(formatStarToken).join('、');
-  if (palace.borrowedStars?.length) return `${palace.name}空宫（借对宫${palace.borrowedFromName ?? ''}：${palace.borrowedStars.join('、')}入事）`;
+  if (majors.length > 0) return formatStarList(majors, true);
+  if (palace.borrowedStars?.length) {
+    return `${palace.name}空宫（借对宫${palace.borrowedFromName ?? ''}：${palace.borrowedStars.join('、')}入事）`;
+  }
   return `${palace.name}空宫`;
+}
+
+function formatPalaceShort(palace: Palace | undefined): string {
+  if (!palace) return '无';
+  const majors = palace.stars.filter(s => s.type === 'major');
+  if (majors.length > 0) return majors.map(s => s.name).join('、');
+  if (palace.borrowedStars?.length) return palace.borrowedStars.join('、');
+  return '空宫';
 }
 
 function parseDbMarkers(text: string): ParsedDb {
@@ -146,7 +162,7 @@ function parseDbMarkers(text: string): ParsedDb {
 
 function section(title: string, body: string) {
   const clean = body.trim();
-  return clean ? `**【${title}】**\n${clean}` : '';
+  return clean ? `**【${title}】**\n\n${clean}` : '';
 }
 
 /** 命宫主星（空宫则取借星） */
@@ -176,7 +192,7 @@ function getComboContent(stars: string[], topic: TopicKey): ComboTopicContent | 
   return combo?.topics[comboTopic] ?? null;
 }
 
-function formatComboAnalysisText(content: ComboTopicContent): string {
+function formatComboAppend(content: ComboTopicContent): string {
   const sections = [
     ['一句话定调', content.dingdiao],
     ['核心论断', content.lundian],
@@ -186,19 +202,44 @@ function formatComboAnalysisText(content: ComboTopicContent): string {
 
   return sections
     .filter(([, body]) => body.trim())
-    .map(([title, body]) => `**【${title}】**\n${body.trim()}`)
+    .map(([title, body]) => section(title, body))
     .join('\n\n');
+}
+
+function buildCoreWithOverlays(
+  star: string,
+  parsed: ParsedDb,
+  chart: ZiweiChart,
+  palace: Palace | undefined,
+): string {
+  const lines = [parsed.lundian.trim()];
+  const overlay = STAR_BRIGHTNESS_OVERLAY[star];
+  if (!overlay || !palace) return lines.join('\n\n');
+
+  const targetStar = palace.stars.find(s => s.name === star) ??
+    oppositePalace(chart, palace)?.stars.find(s => s.name === star);
+  const isBright = targetStar?.brightness === 'bright' || ['庙', '旺'].includes(targetStar?.brightnessLabel ?? '');
+  if (isBright && overlay.bright) lines.push('', overlay.bright);
+  const hasQuan = chart.palaces.some(p => p.stars.some(s => s.name === star && s.siHua === '权'));
+  if (hasQuan && overlay.quan) lines.push('', overlay.quan);
+  return lines.join('\n\n');
 }
 
 function buildTopicTuiyan(chart: ZiweiChart, topic: TopicKey, palace: Palace | undefined, stars: string[]) {
   if (!palace) return '';
-  const lines = [`本宫主星：${formatPalaceMajorStars(palace)}`];
+  const hasEmpty = palaceHasEmptyMajors(palace);
+  const opposite = oppositePalace(chart, palace);
+  const effective = hasEmpty ? opposite : palace;
+  const effectiveMajors = effective?.stars.filter(s => s.type === 'major') ?? [];
+
+  const firstLine = hasEmpty
+    ? `本宫主星：（${TOPIC_PALACE_NAME[topic]}空宫，借对宫${stars[0] ?? '主星'}论事）${formatStarList(effectiveMajors, true)}`
+    : `本宫主星：${formatStarList(palace.stars, true)}`;
+
+  const lines = [firstLine];
   if (stars[1]) {
     const desc = SECOND_MAJOR_DESC[stars[1]] ?? STAR_PALACE_LINE[stars[1]] ?? '与本宫主星共同决定此主题的表现方式。';
     lines.push('', `同宫第二主星：**${stars[1]}**——${desc}`);
-  }
-  if (palace.isEmpty && palace.borrowedStars?.length) {
-    lines.push('', `空宫借星：${TOPIC_PALACE_NAME[topic]}无主星，借对宫【${palace.borrowedFromName ?? '对宫'}】的${palace.borrowedStars.join('、')}入事。`);
   }
   return lines.join('\n');
 }
@@ -210,42 +251,90 @@ function luckyNotesForPalace(palace: Palace | undefined) {
   return palace.stars
     .map(star => {
       const note = LUCKY_STAR_PALACE[star.name]?.[key];
-      return note ? `✦ **${star.name}**：${note}` : '';
+      return note ? `✦ ${star.name}：${note}` : '';
     })
     .filter(Boolean);
 }
 
-function topicPalaceLinks(chart: ZiweiChart, palace: Palace | undefined) {
-  if (!palace) return [];
+function topicPalaceLinks(chart: ZiweiChart, palace: Palace) {
+  const short = palace.name.replace(/宫$/, '');
+  const trine1 = findPalace(chart, (palace.branch + 4) % 12);
+  const trine2 = findPalace(chart, (palace.branch + 8) % 12);
+  const opposite = oppositePalace(chart, palace);
   return [
-    { role: `本宫 · ${palace.name}`, palace },
-    { role: `${palace.name}三合 · ${chart.palaces.find(p => p.branch === (palace.branch + 4) % 12)?.name ?? '三合宫'}`, palace: chart.palaces.find(p => p.branch === (palace.branch + 4) % 12) },
-    { role: `${palace.name}三合 · ${chart.palaces.find(p => p.branch === (palace.branch + 8) % 12)?.name ?? '三合宫'}`, palace: chart.palaces.find(p => p.branch === (palace.branch + 8) % 12) },
-    { role: `${palace.name}对宫 · ${chart.palaces.find(p => p.branch === (palace.branch + 6) % 12)?.name ?? '对宫'}`, palace: chart.palaces.find(p => p.branch === (palace.branch + 6) % 12) },
+    { role: `本宫 · ${palace.name}`, palace, isSelf: true },
+    {
+      role: `${short}三合·${trine1?.name.replace(/宫$/, '') ?? '三合'} · ${trine1?.name ?? '三合宫'}`,
+      palace: trine1,
+      isSelf: false,
+    },
+    {
+      role: `${short}三合·${trine2?.name.replace(/宫$/, '') ?? '三合'} · ${trine2?.name ?? '三合宫'}`,
+      palace: trine2,
+      isSelf: false,
+    },
+    {
+      role: `${short}对宫·${opposite?.name.replace(/宫$/, '') ?? '对宫'} · ${opposite?.name ?? '对宫'}`,
+      palace: opposite,
+      isSelf: false,
+    },
   ];
 }
 
-function buildTopicSanFang(chart: ZiweiChart, palace: Palace | undefined) {
-  const blocks: string[] = [];
-  for (const item of topicPalaceLinks(chart, palace)) {
-    if (!item.palace) continue;
-    blocks.push(`▍**${item.role}**：${formatPalaceMajorStars(item.palace)}`);
-    for (const star of item.palace.stars.filter(s => s.type === 'major')) {
+function formatSanFangPalaceBlock(palace: Palace, role: string, isSelf: boolean): string[] {
+  const lines: string[] = [];
+  const hasEmpty = palaceHasEmptyMajors(palace);
+
+  if (hasEmpty && palace.borrowedStars?.length) {
+    lines.push(`▍${role}：${palace.name}空宫`);
+    lines.push(`（空宫，借对宫${palace.borrowedFromName?.replace(/宫$/, '') ?? '对宫'}：${palace.borrowedStars.join('、')}入事）`);
+  } else {
+    lines.push(`▍${role}：${formatStarList(palace.stars, true)}`);
+  }
+
+  if (isSelf) {
+    for (const star of palace.stars.filter(s => s.type === 'major')) {
       const base = STAR_PALACE_LINE[star.name];
       const sihua = star.siHua ? SIHUA_EFFECT[star.name]?.[star.siHua] : undefined;
-      if (base || sihua) blocks.push(`${star.name}（${brightnessLabel(star)}）：${[base, sihua].filter(Boolean).join(' ｜ ')}`);
+      if (base || sihua) {
+        lines.push(`${star.name}（${brightnessLabel(star)}）：${[base, sihua].filter(Boolean).join(' ｜ ')}`);
+      }
     }
-    blocks.push(...luckyNotesForPalace(item.palace), '');
+  } else if (!hasEmpty) {
+    for (const star of palace.stars.filter(s => s.type === 'major')) {
+      const base = STAR_PALACE_LINE[star.name];
+      const sihua = star.siHua ? SIHUA_EFFECT[star.name]?.[star.siHua] : undefined;
+      if (base || sihua) {
+        lines.push(`  ${star.name}（${brightnessLabel(star)}）：${[base, sihua].filter(Boolean).join(' ｜ ')}`);
+      }
+    }
   }
-  if (palace) {
-    const trineStars = topicPalaceLinks(chart, palace)
-      .slice(1, 3)
-      .flatMap(item => item.palace?.stars.filter(s => s.type === 'major').map(s => s.name) ?? []);
-    const opposite = oppositePalace(chart, palace);
-    blocks.push(
-      `▸ **本盘合参**：${palace.name}本宫【${formatPalaceMajorStars(palace)}】为体、对宫【${formatPalaceMajorStars(opposite)}】为用 ｜ 三合会【${trineStars.join('、') || '无主星'}】——本命四化固定不动，吉凶看大限/流年引动。`,
-    );
+
+  lines.push(...luckyNotesForPalace(palace));
+  lines.push('');
+  return lines;
+}
+
+function buildTopicSanFang(chart: ZiweiChart, palace: Palace | undefined) {
+  if (!palace) return '';
+  const blocks: string[] = [];
+  const links = topicPalaceLinks(chart, palace);
+
+  for (const item of links) {
+    if (!item.palace) continue;
+    blocks.push(...formatSanFangPalaceBlock(item.palace, item.role, item.isSelf));
   }
+
+  const trineStars = links
+    .slice(1, 3)
+    .flatMap(item => item.palace?.stars.filter(s => s.type === 'major').map(s => s.name) ?? []);
+  const opposite = oppositePalace(chart, palace);
+  const selfShort = formatPalaceShort(palace);
+  const oppShort = formatPalaceShort(opposite);
+
+  blocks.push(
+    `▸ **本盘合参**：${palace.name.replace(/宫$/, '')}本宫【${selfShort}】为体、对宫【${oppShort}】为用 ｜ 三合会【${trineStars.join('、') || '无主星'}】——本命四化固定不动，吉凶看大限/流年引动。`,
+  );
   return blocks.join('\n').trim();
 }
 
@@ -255,32 +344,68 @@ function collectNatalSihua(chart: ZiweiChart) {
   );
 }
 
-function buildTopicSihua(chart: ZiweiChart, palace: Palace | undefined) {
+function buildTopicSihua(chart: ZiweiChart, palace: Palace | undefined, options?: OverviewAnalysisOptions) {
   if (!palace) return '';
-  const focusBranches = new Set(topicPalaceLinks(chart, palace).map(item => item.palace?.branch).filter((b): b is number => typeof b === 'number'));
+  const topicShort = palace.name.replace(/宫$/, '');
+  const focusBranches = new Set(
+    topicPalaceLinks(chart, palace)
+      .map(item => item.palace?.branch)
+      .filter((b): b is number => typeof b === 'number'),
+  );
   const lines: string[] = [];
+
   for (const { palace: hitPalace, star } of collectNatalSihua(chart)) {
-    if (!focusBranches.has(hitPalace.branch) && !['禄', '权'].includes(star.siHua ?? '')) continue;
+    if (!focusBranches.has(hitPalace.branch)) continue;
     const effect = SIHUA_EFFECT[star.name]?.[star.siHua!];
     if (!effect) continue;
     const icon = star.siHua === '禄' ? '🟢' : star.siHua === '权' ? '🔵' : star.siHua === '科' ? '🟡' : '🔴';
+    const hitShort = hitPalace.name.replace(/宫$/, '');
     const relation = hitPalace.branch === palace.branch
-      ? `落${palace.name}`
-      : `落${hitPalace.name}·引动${palace.name}`;
+      ? `落${hitShort}`
+      : hitPalace.branch === (palace.branch + 6) % 12
+        ? `落${hitShort}·你${topicShort}的对宫`
+        : `落${hitShort}`;
     lines.push(`${icon} **${star.name}化${star.siHua}**（${relation}）`, effect, '');
   }
+
+  for (const item of topicPalaceLinks(chart, palace)) {
+    if (!item.palace) continue;
+    for (const star of item.palace.stars) {
+      const key = `${star.name}在${palaceNoteLabel(item.palace.name)}`;
+      const note = SIHUA_PALACE_NOTES[key as keyof typeof SIHUA_PALACE_NOTES];
+      if (note) lines.push(`◇ **${key}**：${note}`);
+    }
+  }
+
+  const temporal = buildTemporalSihuaAppendix(chart, options);
+  if (temporal) {
+    lines.push('', temporal);
+  }
+
   return lines.join('\n').trim();
 }
 
 function buildRiskReminder(palace: Palace | undefined) {
-  if (!palace) return '';
-  const risks: string[] = [];
+  const risks: string[] = [
+    '> 紫微斗数讲究阴阳互见，下方为基于本盘特征的中性提醒，知所警惕方能转危为安。',
+    '',
+  ];
+  if (!palace) return risks.join('\n');
+
   const jiStars = palace.stars.filter(s => s.siHua === '忌').map(s => s.name);
   const shaStars = palace.stars.filter(s => s.type === 'sha').map(s => s.name);
-  if (jiStars.length) risks.push(`本宫见${jiStars.join('、')}化忌，遇大限流年引动时，相关主题容易出现阻滞、反复或口舌压力。`);
-  if (shaStars.length) risks.push(`本宫会${shaStars.join('、')}等煞曜，宜避免急躁决策，凡事留证据、留余地。`);
-  if (palace.isEmpty) risks.push('本宫为空宫，判断不宜只看本宫，必须合参对宫与三方四正，外部环境对结果影响更大。');
-  if (!risks.length) risks.push('本宫未见明显重煞，风险多来自大限、流年触发；平时以稳守节奏、避免过度消耗为要。');
+  if (palaceHasEmptyMajors(palace)) {
+    risks.push('◆ 本宫空宫，判断不宜只看本宫，必须合参对宫与三方四正，外部环境对结果影响更大。');
+  }
+  if (jiStars.length) {
+    risks.push(`◆ 本宫见${jiStars.join('、')}化忌，遇大限流年引动时，相关主题容易出现阻滞、反复或口舌压力。`);
+  }
+  if (shaStars.length) {
+    risks.push(`◆ 本宫会${shaStars.join('、')}等煞曜，宜避免急躁决策，凡事留证据、留余地。`);
+  }
+  if (risks.length === 2) {
+    risks.push('◆ 本宫未见明显重煞，风险多来自大限、流年触发；平时以稳守节奏、避免过度消耗为要。');
+  }
   return risks.join('\n');
 }
 
@@ -311,44 +436,53 @@ function splitSentences(text: string) {
     .filter(Boolean) ?? [];
 }
 
-function topicOverviewCopy(topic: TopicKey, stars: string[]) {
-  const copy = TOPIC_OVERVIEW_COPY[topic];
-  if (!copy) return '';
-  const exactKey = stars.join('|');
-  return copy[exactKey] || copy[stars[0]] || '';
-}
-
 function buildTopicOverview(topic: TopicKey, palace: Palace | undefined, stars: string[], parsed: ParsedDb) {
-  const matched = topicOverviewCopy(topic, stars);
-  if (matched) return matched;
+  const curated = lookupTopicStarOverview(topic, stars);
+  if (curated) return curated;
 
   const palaceName = TOPIC_PALACE_NAME[topic];
   const starText = stars.length ? stars.join('、') : '空宫借星';
-  const core = splitSentences(parsed.lundian).slice(0, 4).join('');
+  const core = splitSentences(parsed.lundian).slice(0, 3).join('');
   const palaceText = palace
-    ? `${palaceName}落在${palace.name}，本宫主星取【${starText}】，实际呈现要把本宫、对宫与三方四正一起看。`
+    ? `${palaceName}以【${starText}】定调，须合参本宫、对宫与三方四正一起看。`
     : `${palaceName}未能定位到明确宫位。`;
   const action = TOPIC_OVERVIEW_ACTION[topic] ?? '';
-  return [core || palaceText, core ? palaceText : '', action]
-    .filter(Boolean)
-    .join('\n');
+  return [core || palaceText, core ? palaceText : '', action].filter(Boolean).join('\n\n');
 }
 
-function buildEnrichedTopicText(chart: ZiweiChart, topic: TopicKey, baseText: string, stars: string[]) {
+function buildEnrichedTopicText(
+  chart: ZiweiChart,
+  topic: TopicKey,
+  baseText: string,
+  stars: string[],
+  options?: OverviewAnalysisOptions,
+) {
   const palace = palaceByTopic(chart, topic);
   const parsed = parseDbMarkers(baseText);
+  const primaryStar = stars[0] ?? '';
+
+  const sihuaBody = buildTopicSihua(chart, palace, options);
   const parts = [
     section(`${TOPIC_LABEL[topic]}总览`, buildTopicOverview(topic, palace, stars, parsed)),
     section('一句话定调', parsed.dingdiao || `${TOPIC_PALACE_NAME[topic]}以${stars.join('、') || '本宫'}为主要气象，须合参三方四正。`),
-    section('核心论断', parsed.lundian || baseText),
+    section('核心论断', buildCoreWithOverlays(primaryStar, parsed, chart, palace) || parsed.lundian || baseText),
     section('命盘推演', buildTopicTuiyan(chart, topic, palace, stars)),
     section('三方四正联动', buildTopicSanFang(chart, palace)),
-    section('四化路径分析 · 落到你这盘', buildTopicSihua(chart, palace)),
+    section(
+      '四化路径分析 · 落到你这盘',
+      sihuaBody || '本命四化在本主题三方四正网络内暂未形成显著引动，需结合大限、流年再看触发时机。',
+    ),
     section('命盘依据', parsed.yiju || buildGenericBasis(topic, palace, stars)),
     section('经典出处', parsed.chuchu || buildGenericSource(topic, stars)),
-    section('风险提醒', buildRiskReminder(palace)),
+    section('⚠️ 风险提醒', buildRiskReminder(palace)),
   ];
-  return parts.filter(Boolean).join('\n\n');
+
+  let text = parts.filter(Boolean).join('\n\n');
+  const combo = getComboContent(stars, topic);
+  if (combo) {
+    text += `\n\n---\n\n${formatComboAppend(combo)}`;
+  }
+  return text;
 }
 
 /** 按 topic 对应宫位主星取 STAR_DB 论断；overview 走生产全文组装 */
@@ -360,19 +494,18 @@ export function buildChartAnalysisText(
   if (topic === 'overview') {
     return buildOverviewAnalysisText(chart, options);
   }
-  const stars = getTopicMainStars(chart, topic);
-  const comboText = getComboContent(stars, topic);
-  if (comboText) {
-    return buildEnrichedTopicText(chart, topic, formatComboAnalysisText(comboText), stars);
-  }
 
+  const stars = getTopicMainStars(chart, topic);
   const star = stars[0] ?? null;
   if (!star) {
     return `未能识别【${TOPIC_PALACE_NAME[topic]}】主星，请重新起盘后再试。`;
   }
+
   const gender = chart.birthInfo.gender;
   const text = getAnalysisText(star, topic, gender);
-  if (text.trim()) return buildEnrichedTopicText(chart, topic, text, stars);
+  if (text.trim()) {
+    return buildEnrichedTopicText(chart, topic, text, stars, options);
+  }
   return `暂无【${star}】在「${topic}」维度的库内论断，请稍后重试或换一话题。`;
 }
 

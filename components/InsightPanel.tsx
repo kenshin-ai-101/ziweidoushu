@@ -1,9 +1,19 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react';
 import type { ZiweiChart, Palace } from '@/lib/ziwei/types';
 import type { TimeView } from './TimeNav';
 import { getChartToken } from '@/lib/ziwei/chart-token';
+import {
+  buildFocusCacheKey,
+  buildSelectionFollowUpPrompt,
+  normalizeSelectionText,
+  readInterpretStream,
+  requestInterpret,
+  writeInterpretCache,
+} from '@/lib/ziwei/interpret-client';
+import { BRANCHES, STEMS } from '@/lib/ziwei/constants';
+import { buildTimeOverlay, getTemporalGanzhiInfo, getTimeOverlayLabel } from '@/lib/ziwei/sihua';
 import {
   CHART_TOPIC_TABS_ALL,
   COLLAPSIBLE_SECTION_TITLES,
@@ -11,7 +21,7 @@ import {
   PALACE_TO_TOPIC,
   type TopicKey,
 } from '@/lib/ziwei/db-analysis';
-import ChatPanel from '@/components/ChatPanel';
+import ChatPanel, { type ChatPanelHandle } from '@/components/ChatPanel';
 
 interface SelectedSiHua {
   starName: string;
@@ -21,6 +31,21 @@ interface SelectedSiHua {
 
 type PanelMode = 'analysis' | 'chat';
 type AnalysisCache = Partial<Record<string, string>>;
+
+interface SelectionBubble {
+  text: string;
+  top: number;
+  left: number;
+}
+
+interface ParsedAnalysisText {
+  dingdiao: string;
+  lundian: string;
+  yiju: string;
+  chuchu: string;
+  raw: string;
+  hasMarkers: boolean;
+}
 
 const OVERVIEW_AXES = [
   { key: 'career', label: '事业' },
@@ -68,8 +93,134 @@ function makeAnalysisCacheKey(
   ].join(':');
 }
 
+function parseAnalysisText(text: string): ParsedAnalysisText {
+  const out: ParsedAnalysisText = {
+    dingdiao: '',
+    lundian: '',
+    yiju: '',
+    chuchu: '',
+    raw: text,
+    hasMarkers: false,
+  };
+  if (!text || text.startsWith('正在生成')) return out;
+
+  const re = /\*\*【([^】]+)】\*\*/g;
+  const parts: { name: string; start: number; markerEnd: number }[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    parts.push({ name: match[1], start: match.index, markerEnd: match.index + match[0].length });
+  }
+
+  if (parts.length === 0) {
+    out.lundian = text.trim();
+    return out;
+  }
+
+  out.hasMarkers = true;
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    const end = i + 1 < parts.length ? parts[i + 1].start : text.length;
+    const body = text.slice(part.markerEnd, end).trim();
+    if (part.name.includes('一句话定调') || part.name.includes('一句话结论')) out.dingdiao = body;
+    else if (part.name.includes('核心论断') || part.name.includes('核心判断')) out.lundian = body;
+    else if (part.name.includes('命盘依据')) out.yiju = body;
+    else if (part.name.includes('经典出处')) out.chuchu = body;
+  }
+  return out;
+}
+
+function splitParagraphs(text: string) {
+  return text
+    .split(/\n{2,}|\n(?=[·◇◆▸\-])/)
+    .map(line => line.replace(/\*\*/g, '').trim())
+    .filter(Boolean);
+}
+
+function firstParagraph(text: string) {
+  return splitParagraphs(text)[0] ?? '';
+}
+
 function findPalace(chart: ZiweiChart, palaceName: string) {
   return chart.palaces.find(p => p.name === palaceName || (palaceName === '仆役' && p.name === '交友'));
+}
+
+function findPalaceByBranch(chart: ZiweiChart, branch: number) {
+  return chart.palaces.find(p => p.branch === branch);
+}
+
+function mingPalace(chart: ZiweiChart) {
+  return chart.palaces.find(p => p.isMingGong || p.branch === chart.mingGongBranch) ?? chart.palaces[0];
+}
+
+function palaceMajorNames(palace?: Palace) {
+  const majors = palace?.stars.filter(s => s.type === 'major').map(s => s.name) ?? [];
+  if (majors.length > 0) return majors;
+  return palace?.borrowedStars ?? [];
+}
+
+function formatStars(palace?: Palace, includeMinor = true) {
+  if (!palace) return '无';
+  const selected = includeMinor ? palace.stars : palace.stars.filter(s => s.type === 'major');
+  const stars = selected.map(s => `${s.name}${s.siHua ? `化${s.siHua}` : ''}${s.brightnessLabel ? `（${s.brightnessLabel}）` : ''}`);
+  if (stars.length > 0) return stars.join('、');
+  if (palace.borrowedStars?.length) return `空宫，借${palace.borrowedFromName ?? '对宫'}：${palace.borrowedStars.join('、')}`;
+  return '空宫';
+}
+
+function getOppositePalace(chart: ZiweiChart, palace: Palace) {
+  return findPalaceByBranch(chart, (palace.branch + 6) % 12);
+}
+
+function getSanFangSiZheng(chart: ZiweiChart) {
+  const ming = mingPalace(chart);
+  const branches = [ming.branch, (ming.branch + 4) % 12, (ming.branch + 8) % 12, (ming.branch + 6) % 12];
+  const roles = ['本宫', '三合位', '三合位', '对宫'];
+  return branches.map((branch, index) => ({
+    role: roles[index],
+    palace: findPalaceByBranch(chart, branch),
+  }));
+}
+
+function collectSihua(chart: ZiweiChart) {
+  return chart.palaces.flatMap(palace => palace.stars
+    .filter(star => star.siHua)
+    .map(star => ({
+      palace,
+      starName: star.name,
+      siHua: star.siHua!,
+      brightnessLabel: star.brightnessLabel,
+    })));
+}
+
+function sihuaTone(sihua: string) {
+  if (sihua === '禄') return '机缘、财气与顺势资源';
+  if (sihua === '权') return '掌控、执行与话语权';
+  if (sihua === '科') return '名声、文书与贵人认可';
+  return '阻滞、执念与需要修正的课题';
+}
+
+function starOverviewCopy(chart: ZiweiChart, starNames: string[], parsed: ParsedAnalysisText) {
+  const key = starNames.join('');
+  const dbDingdiao = firstParagraph(parsed.dingdiao);
+  const dbLundian = parsed.lundian.trim();
+  if (key.includes('天机') && key.includes('巨门')) {
+    return {
+      summary: firstParagraph(dbLundian) || '你是天生的智多星，思维敏锐，洞察力强，善于分析和策划，在需要动脑的事情上往往能想到别人没想到的角度。最突出的天赋是灵活变通，能在变化中找到机会；性格弱点是想得多、行动慢，容易因为过度分析错失窗口。',
+      oneLine: dbDingdiao || '天机为智慧星，宜辅佐不宜独当，最忌善变而无成。',
+      core: dbLundian || '天机主智慧、谋略、变动，巨门主口才、辨析、是非；两星同参，形成“以脑力和表达立身”的结构。适合策划、咨询、技术、法律、教学、传媒等需要分析与说服的领域。',
+      comboTitle: '天机巨门',
+      comboBrief: '智星配暗星，口才犀利、善辩是非，宜法律传媒。',
+      comboLine: '机巨同宫，聪明犀利善辩论，一生多口舌是非，但也能靠口才与专业成就。',
+    };
+  }
+  return {
+    summary: firstParagraph(dbLundian) || `${starNames.join('、') || '命宫'}为本盘性格核心，先天优势在于把本宫主星的气质稳定发挥；若命宫空宫，则需借对宫星曜入事，人生主题更容易被外部环境、人际互动和迁移变化引动。`,
+    oneLine: dbDingdiao || getOverviewHeadline(chart),
+    core: dbLundian || '命盘判断以命宫为体、三方四正为用；再看本命四化落点，确认哪些领域被强化，哪些领域需要修正。',
+    comboTitle: starNames.join('') || '命宫格局',
+    comboBrief: '以命宫主星、对宫借星与三方四正合参。',
+    comboLine: '本盘需从命宫主星、三方四正和四化路径共同判断，不可只看单颗主星。',
+  };
 }
 
 function palaceScore(palace?: Palace) {
@@ -91,7 +242,191 @@ function palaceScore(palace?: Palace) {
   return Math.max(32, Math.min(92, score));
 }
 
-function OverviewVisual({ chart }: { chart: ZiweiChart }) {
+function timeViewLabel(view: TimeView) {
+  if (view === 'mingpan') return '本命';
+  if (view === 'daxian') return '大限';
+  if (view === 'liunian') return '流年';
+  if (view === 'liuyue') return '流月';
+  if (view === 'liuri') return '流日';
+  if (view === 'liushi') return '流时';
+  return getTimeOverlayLabel(view) ?? '本命';
+}
+
+function OverviewToggle({ title, children }: { title: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="overview-toggle">
+      <button type="button" aria-expanded={open} onClick={() => setOpen(v => !v)}>
+        <span>{title}</span>
+        <span className="overview-toggle-chevron">{open ? '⌄' : '›'}</span>
+      </button>
+      {open && <div className="overview-toggle-body">{children}</div>}
+    </div>
+  );
+}
+
+function OverviewDetail({
+  chart,
+  text,
+  timeView,
+  liunianYear,
+  liuyueMonth,
+  liuriDay,
+  liushiHour,
+}: {
+  chart: ZiweiChart;
+  text: string;
+  timeView: TimeView;
+  liunianYear: number;
+  liuyueMonth: number;
+  liuriDay: number;
+  liushiHour: number;
+}) {
+  const ming = mingPalace(chart);
+  const opposite = getOppositePalace(chart, ming);
+  const mainStars = palaceMajorNames(ming);
+  const parsed = parseAnalysisText(text);
+  const copy = starOverviewCopy(chart, mainStars, parsed);
+  const shen = findPalaceByBranch(chart, chart.shenGongBranch);
+  const sihuas = collectSihua(chart);
+  const sanfang = getSanFangSiZheng(chart);
+  const yearStem = STEMS[chart.lunarInfo.yearStem] ?? '';
+  const hasEmptyMing = ming?.isEmpty || !ming?.stars.some(s => s.type === 'major');
+  const temporal = getTemporalGanzhiInfo(liunianYear, liuyueMonth, liuriDay, liushiHour);
+  const overlay = buildTimeOverlay({ view: timeView, chart, liunianYear, liuyueMonth, liuriDay, liushiHour });
+  const overlayEntries = (['禄', '权', '科', '忌'] as const)
+    .map(siHua => {
+      const starName = Object.keys(overlay).find(name => overlay[name] === siHua);
+      return starName ? { starName, siHua } : null;
+    })
+    .filter(Boolean) as { starName: string; siHua: string }[];
+
+  return (
+    <div className="overview-detail">
+      <div className="overview-audit">
+        <strong>已逐条核对</strong>
+        <span>{mainStars[0] ?? '命宫'} · 命格总览</span>
+        <span>{parsed.hasMarkers ? '本地知识库已命中' : '本地知识库兜底'}</span>
+        <span>{timeViewLabel(timeView)}</span>
+        <span>{STEMS[temporal.yearStem]}{BRANCHES[temporal.yearBranch]}年</span>
+      </div>
+
+      <section className="overview-section">
+        <h3>命格总览</h3>
+        <p>{copy.summary}</p>
+      </section>
+
+      <section className="overview-section overview-callout">
+        <h3>一句话定调</h3>
+        <p>{copy.oneLine}</p>
+      </section>
+
+      <section className="overview-section">
+        <h3>核心论断</h3>
+        {splitParagraphs(copy.core).map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+        <p>本盘命宫{hasEmptyMing ? '为空宫，需借对宫入事；' : `坐${formatStars(ming, false)}；`}对宫为{opposite?.name ?? '迁移'}，见{formatStars(opposite, false)}。这表示“自我定位”与外部场域联动很强，越是在真实协作、表达、流动和问题解决中，越能看见命盘优势。</p>
+      </section>
+
+      <section className="overview-section">
+        <h3>身宫 · 后天追求</h3>
+        <p>你的身宫落在{shen?.name ?? '本宫'}，{chart.shenGongBranch === chart.mingGongBranch ? '与命宫同宫，先天格局就是后天追求，人生主线集中，35 岁后更像把命宫主题继续放大与深化。' : `后天追求会转向${shen?.name ?? '身宫'}主管的领域，需把命宫天赋落实到该宫位的人生场景。`}身宫不是另一个命盘，而是中年以后更明显的行动重心。</p>
+      </section>
+
+      <section className="overview-section">
+        <h3>命盘推演</h3>
+        <p>本宫主星：{formatStars(ming, false)}，{chart.wuxingJuName}同参。</p>
+        <p>第二主星：{mainStars[1] ? `${mainStars[1]}——与${mainStars[0]}共同决定命宫气质。` : '以三方四正与对宫借星补足命宫判断。'}{hasEmptyMing ? ` 命宫空宫时，借${opposite?.name ?? '对宫'}的${palaceMajorNames(opposite).join('、') || '主星'}论事。` : ''}</p>
+      </section>
+
+      <section className="overview-section">
+        <h3>三方四正联动</h3>
+        <div className="overview-proof-grid">
+          {sanfang.map(item => (
+            <div key={`${item.role}-${item.palace?.branch}`}>
+              <strong>{item.role} · {item.palace?.name ?? '宫位'}</strong>
+              <p>{formatStars(item.palace)}</p>
+            </div>
+          ))}
+        </div>
+        <p>本盘合参：命宫本宫为体、对宫为用，三合会官禄与财帛，四化落点决定哪一宫被引动。判断顺序为命宫定性、三方四正定格局、四化定路径。</p>
+      </section>
+
+      <section className="overview-section">
+        <h3>四化路径分析 · 落到你这盘</h3>
+        {sihuas.length > 0 ? sihuas.map(item => (
+          <div className={`overview-sihua-row overview-sihua-row--${item.siHua}`} key={`${item.starName}-${item.siHua}-${item.palace.branch}`}>
+            <span>化{item.siHua}</span>
+            <p>{item.starName}落{item.palace.name}{item.brightnessLabel ? ` · ${item.brightnessLabel}` : ''}，{sihuaTone(item.siHua)}会通过{PALACE_ROLES[item.palace.name] ?? item.palace.name}显现。</p>
+          </div>
+        )) : <p>本盘未识别到年干四化落星，请回到首页重新起盘后再试。</p>}
+      </section>
+
+      <section className="overview-section">
+        <h3>年干四化 · 关键宫位影响</h3>
+        <p>{yearStem}年四化以出生年干为准，本命四化固定不动，大限与流年只是在不同阶段引动它。</p>
+        {sihuas.map(item => (
+          <p key={`year-${item.starName}-${item.siHua}-${item.palace.branch}`}>{item.starName}化{item.siHua}在{item.palace.name}：{sihuaTone(item.siHua)}，重点观察{PALACE_ROLES[item.palace.name] ?? item.palace.name}。</p>
+        ))}
+        {timeView !== 'mingpan' && overlayEntries.length > 0 && (
+          <div className="overview-time-layer">
+            <strong>{timeViewLabel(timeView)}四化</strong>
+            {overlayEntries.map(item => <span key={`${item.starName}-${item.siHua}`}>{item.starName}化{item.siHua}</span>)}
+          </div>
+        )}
+      </section>
+
+      <OverviewToggle title="命盘依据">
+        {(parsed.yiju ? splitParagraphs(parsed.yiju) : [
+          `出生四柱：${chart.birthPillars?.join(' · ') ?? `${STEMS[chart.lunarInfo.yearStem]}${BRANCHES[chart.lunarInfo.yearBranch]}年`}；命宫在${BRANCHES[chart.mingGongBranch]}，身宫在${BRANCHES[chart.shenGongBranch]}，五行局为${chart.wuxingJuName}。`,
+          `宫位依据：命宫${formatStars(ming)}；对宫${opposite?.name ?? '迁移'}${formatStars(opposite)}；三方四正取命、财、官、迁四宫合参。`,
+        ]).map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+      </OverviewToggle>
+
+      <OverviewToggle title="经典出处">
+        {(parsed.chuchu ? splitParagraphs(parsed.chuchu) : [
+          '《紫微斗数全书》以命宫主星定先天性情，以三方四正定事业财官格局，以四化定吉凶路径。',
+          '倪海夏《天纪》体系重视命身、三方四正与四化同参：空宫不作空论，须借对宫星曜入事。',
+        ]).map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+      </OverviewToggle>
+
+      <section className="overview-section overview-risk">
+        <h3>风险提醒</h3>
+        <p>紫微斗数讲究阴阳互见，下方为基于本盘特征的中性提醒，知所警惕方能转危为安。</p>
+        {hasEmptyMing && <p>本宫空宫，能量需借对宫论事，命格走势比一般人更易受外缘、迁移、人际反馈牵动，自主定锚尤其重要。</p>}
+        {mainStars.includes('天机') && <p>天机重思考与变化，优点是机敏，风险是多谋少决；真正的破局点在于把分析变成稳定行动。</p>}
+        {mainStars.includes('巨门') && <p>巨门重表达与辨析，优点是口才，风险是口舌是非；越有能力争辩，越要学会选择何时不争。</p>}
+      </section>
+
+      <section className="overview-section overview-combo">
+        <h3>针对你的命盘</h3>
+        <p>{hasEmptyMing ? `命宫空宫借${opposite?.name ?? '对宫'}——你命宫无主星，需借${opposite?.name ?? '对宫'}的${palaceMajorNames(opposite).join('、') || '主星'}论事。` : `命宫坐${mainStars.join('、')}——这是本盘自我、性格与先天格局的主轴。`}你这盘的特点是：自我定位需要在真实事务中被校准，越能走出去沟通、协作、解决问题，越容易显出命宫优势。</p>
+        <div className="overview-combo-card">
+          <strong>双星同宫 · 「{copy.comboTitle}」</strong>
+          <span>{copy.comboBrief}</span>
+          <p>{copy.comboLine}</p>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function OverviewVisual({
+  chart,
+  text,
+  timeView,
+  liunianYear,
+  liuyueMonth,
+  liuriDay,
+  liushiHour,
+}: {
+  chart: ZiweiChart;
+  text: string;
+  timeView: TimeView;
+  liunianYear: number;
+  liuyueMonth: number;
+  liuriDay: number;
+  liushiHour: number;
+}) {
   const center = 130;
   const radii = [34, 55, 76, 96];
   const axisPalace: Record<string, string> = {
@@ -172,6 +507,15 @@ function OverviewVisual({ chart }: { chart: ZiweiChart }) {
           <p>思虑过动易摇摆，定守一处、做深一件，方能成器。</p>
         </div>
       </div>
+      <OverviewDetail
+        chart={chart}
+        text={text}
+        timeView={timeView}
+        liunianYear={liunianYear}
+        liuyueMonth={liuyueMonth}
+        liuriDay={liuriDay}
+        liushiHour={liushiHour}
+      />
     </div>
   );
 }
@@ -227,7 +571,7 @@ function AiSection({
                 : 'insight-section-title'
           }
         >
-          {section.title.replace(/^【|】$/g, '')}
+          {section.title.startsWith('【') ? section.title : `【${section.title}】`}
         </span>
         {section.collapsible && (
           <span className="insight-section-chevron" style={{ transform: open ? 'rotate(90deg)' : 'none' }}>
@@ -244,7 +588,6 @@ function AiSection({
 
 function AiLine({ line, streaming }: { line: string; streaming?: boolean }) {
   if (line.trim() === '') return <div className="h-1" />;
-  if (line.trim() === '---') return <div className="insight-separator" />;
   const sectionMatch = line.match(/^\*\*【(.+?)】\*\*$/);
   if (sectionMatch) {
     return (
@@ -255,11 +598,9 @@ function AiLine({ line, streaming }: { line: string; streaming?: boolean }) {
       </div>
     );
   }
-  const isQuote = line.trim().startsWith('>');
-  const cleanLine = isQuote ? line.trim().replace(/^>\s*/, '') : line;
-  const parts = cleanLine.split(/\*\*(.+?)\*\*/);
+  const parts = line.split(/\*\*(.+?)\*\*/);
   return (
-    <div className={isQuote ? 'insight-body-line insight-body-line--quote' : 'insight-body-line'}>
+    <div className="insight-body-line">
       {parts.map((part, j) =>
         j % 2 === 0
           ? part
@@ -297,7 +638,7 @@ function parseSections(text: string) {
       current = { title: h1[1], level: 'h1', body: [], collapsible: isCollapsibleSection(h1[1]) };
       continue;
     }
-    const h2 = line.match(/^#{2,3}\s+(.+)$/);
+    const h2 = line.match(/^##\s+(.+)$/);
     if (h2) {
       flush();
       current = { title: h2[1], level: 'h2', body: [], collapsible: isCollapsibleSection(h2[1]) };
@@ -323,6 +664,11 @@ function AiContent({ text, streaming }: { text: string; streaming?: boolean }) {
   );
 }
 
+function extractHeadline(text: string): string | null {
+  const match = text.match(/\*\*【一句话定调】\*\*\s*\n(.+?)(?:\n|$)/);
+  return match?.[1]?.trim() ?? null;
+}
+
 async function fetchAnalysis(
   chart: ZiweiChart,
   topic: TopicKey,
@@ -340,7 +686,7 @@ async function fetchAnalysis(
   const res = await fetch('/api/analysis', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chart, chartToken, topic, options, userId: 'anon' }),
+    body: JSON.stringify({ chart, chartToken, topic, options }),
   });
 
   if (!res.ok) {
@@ -383,9 +729,11 @@ export default function InsightPanel({
   const [loading, setLoading] = useState(false);
   const [followUp, setFollowUp] = useState('');
   const [followUpLoading, setFollowUpLoading] = useState(false);
+  const [selectionBubble, setSelectionBubble] = useState<SelectionBubble | null>(null);
 
   const activeTopicRef = useRef<TopicKey>('overview');
   const bodyRef = useRef<HTMLDivElement>(null);
+  const chatPanelRef = useRef<ChatPanelHandle>(null);
   const lastFocusKey = useRef('');
   const skipTopicEffect = useRef(false);
   const chartToken = getChartToken(chart);
@@ -423,19 +771,26 @@ export default function InsightPanel({
     let cancelled = false;
 
     const timer = setTimeout(async () => {
-      const current = activeTopicRef.current;
-      const queue = CHART_TOPIC_TABS_ALL.map(t => t.key).filter(topic => topic !== current);
-      for (let i = 0; i < queue.length; i += 2) {
-        if (cancelled) return;
-        await Promise.all(queue.slice(i, i + 2).map(async topic => {
-          const cacheKey = makeAnalysisCacheKey(topic, analysisOptions);
-          if (tabCacheRef.current[cacheKey]) return;
-          try {
-            const text = await fetchAnalysis(chart, topic, analysisOptions);
-            if (!cancelled) setTabCache(prev => ({ ...prev, [cacheKey]: text }));
-          } catch { /* keep lazy fallback on click */ }
-        }));
-      }
+      try {
+        const res = await fetch('/api/lookup-tabs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chart, chartToken }),
+        });
+        if (cancelled || !res.ok) return;
+        const data = await res.json();
+        if (data?.source === 'db' && data.tabs) {
+          const seededTabs = Object.fromEntries(
+            Object.entries(data.tabs as Record<TopicKey, string>).map(([topic, text]) => [
+              makeAnalysisCacheKey(topic as TopicKey, analysisOptions),
+              text,
+            ]),
+          );
+          setTabCache(prev => ({ ...seededTabs, ...prev }));
+          const current = activeTopicRef.current;
+          if (data.tabs[current] && analysisOptions.view === 'mingpan') setContent(data.tabs[current]);
+        }
+      } catch { /* fallback */ }
     }, 400);
 
     return () => {
@@ -466,33 +821,31 @@ export default function InsightPanel({
       prefixRef.value = prev && !prev.startsWith('正在生成') ? `${prev}\n\n---\n\n` : '';
       return prefixRef.value;
     });
-    let assistantText = '';
-    try {
-      const res = await fetch('/api/interpret', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chart,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-      if (!res.ok || !res.body) throw new Error('请求失败');
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        for (const line of decoder.decode(value, { stream: true }).split('\n')) {
-          if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6);
-          if (data === '[DONE]') break;
-          try {
-            assistantText += JSON.parse(data).delta?.text ?? '';
-            setContent(`${prefixRef.value}${assistantText}`);
-          } catch { /* skip */ }
-        }
+    const cacheKey = buildFocusCacheKey(chartToken, prompt);
+    let assistantText = '';
+
+    try {
+      const result = await requestInterpret({
+        chart,
+        messages: [{ role: 'user', content: prompt }],
+        cacheKey,
+      });
+
+      if (!result.ok) {
+        setContent(`${prefixRef.value}${result.error}`);
+        return;
       }
+
+      if (result.cached) {
+        setContent(`${prefixRef.value}${result.text}`);
+        return;
+      }
+
+      assistantText = await readInterpretStream(result.reader, text => {
+        setContent(`${prefixRef.value}${text}`);
+      });
+      if (assistantText) writeInterpretCache(cacheKey, assistantText);
     } catch {
       setContent(`${prefixRef.value}解读失败，请稍后重试。`);
     } finally {
@@ -568,85 +921,196 @@ export default function InsightPanel({
     void streamFollowUp(text);
   };
 
-  if (panelMode === 'chat') {
-    return (
-      <div className="insight-panel-root insight-panel-root--chat">
-        <div className="insight-flip-bar">
-          <div className="insight-flip-seg">
-            <button type="button" onClick={() => setPanelMode('analysis')}>命盘分析</button>
-            <button type="button" className="active" onClick={() => setPanelMode('chat')}>AI 对话</button>
-          </div>
-          <button type="button" className="insight-flip-util" aria-label="下载命盘" onClick={onExport}>↓</button>
-        </div>
-        <ChatPanel chart={chart} embedded />
-      </div>
-    );
-  }
+  const updateSelectionBubble = useCallback(() => {
+    const root = bodyRef.current;
+    const sel = window.getSelection();
+    if (!root || !sel || sel.isCollapsed || sel.rangeCount === 0) {
+      setSelectionBubble(null);
+      return;
+    }
+
+    const text = normalizeSelectionText(sel.toString());
+    if (!text) {
+      setSelectionBubble(null);
+      return;
+    }
+
+    const range = sel.getRangeAt(0);
+    if (!root.contains(range.commonAncestorContainer)) {
+      setSelectionBubble(null);
+      return;
+    }
+
+    const rect = range.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      setSelectionBubble(null);
+      return;
+    }
+
+    setSelectionBubble({
+      text,
+      top: rect.bottom + 8,
+      left: Math.min(
+        Math.max(rect.left + rect.width / 2, 72),
+        window.innerWidth - 72,
+      ),
+    });
+  }, []);
+
+  useEffect(() => {
+    if (panelMode !== 'analysis') {
+      setSelectionBubble(null);
+      return;
+    }
+
+    const onMouseUp = () => {
+      requestAnimationFrame(updateSelectionBubble);
+    };
+    const onSelectionChange = () => {
+      const sel = window.getSelection();
+      if (!sel?.toString().trim()) setSelectionBubble(null);
+    };
+    const onScroll = () => setSelectionBubble(null);
+    const onMouseDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('.insight-followup-bubble')) return;
+      if (!target?.closest('.insight-analysis-body')) setSelectionBubble(null);
+    };
+
+    document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('selectionchange', onSelectionChange);
+    window.addEventListener('scroll', onScroll, true);
+    document.addEventListener('mousedown', onMouseDown);
+    return () => {
+      document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('selectionchange', onSelectionChange);
+      window.removeEventListener('scroll', onScroll, true);
+      document.removeEventListener('mousedown', onMouseDown);
+    };
+  }, [panelMode, updateSelectionBubble, content, activeTopic]);
+
+  const handleSelectionFollowUp = () => {
+    if (!selectionBubble) return;
+    const prompt = buildSelectionFollowUpPrompt(selectionBubble.text);
+    window.getSelection()?.removeAllRanges();
+    setSelectionBubble(null);
+    setPanelMode('chat');
+    queueMicrotask(() => {
+      void chatPanelRef.current?.sendMessage(prompt);
+    });
+  };
+
+  const headline = activeTopic === 'overview' ? extractHeadline(content) : null;
 
   return (
-    <div className="insight-panel-root">
+    <div className={`insight-panel-root${panelMode === 'chat' ? ' insight-panel-root--chat' : ''}`}>
       <div className="insight-flip-bar">
         <div className="insight-flip-seg">
-          <button type="button" className="active" onClick={() => setPanelMode('analysis')}>命盘分析</button>
-          <button type="button" onClick={() => setPanelMode('chat')}>AI 对话</button>
+          <button
+            type="button"
+            className={panelMode === 'analysis' ? 'active' : ''}
+            onClick={() => setPanelMode('analysis')}
+          >
+            命盘分析
+          </button>
+          <button
+            type="button"
+            className={panelMode === 'chat' ? 'active' : ''}
+            onClick={() => setPanelMode('chat')}
+          >
+            AI 对话
+          </button>
         </div>
         <button type="button" className="insight-flip-util" aria-label="下载命盘" onClick={onExport}>↓</button>
       </div>
 
-      <div className="insight-topics">
-        <div className="insight-topic-seg insight-topic-seg--wrap">
-          {CHART_TOPIC_TABS_ALL.map(t => (
-            <button
-              key={t.key}
-              type="button"
-              className={activeTopic === t.key ? 'seg-active' : ''}
-              onClick={() => void handleTopicClick(t.key)}
-              disabled={loading || followUpLoading}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div ref={bodyRef} className="insight-analysis-body">
-        {!content && (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="text-4xl mb-3" style={{ color: 'var(--t-gold)', opacity: 0.1 }}>✦</div>
-            <p className="insight-loading-text animate-pulse">命格解读生成中…</p>
+      <div className={panelMode === 'analysis' ? 'insight-analysis-pane' : 'insight-analysis-pane insight-analysis-pane--hidden'}>
+        <div className="insight-topics">
+          <div className="insight-topic-seg insight-topic-seg--wrap">
+            {CHART_TOPIC_TABS_ALL.map(t => (
+              <button
+                key={t.key}
+                type="button"
+                className={activeTopic === t.key ? 'seg-active' : ''}
+                onClick={() => void handleTopicClick(t.key)}
+                disabled={loading || followUpLoading}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
-        )}
-        {content && activeTopic === 'overview' && !followUpLoading && !content.startsWith('正在生成') && (
-          <>
-            <OverviewVisual chart={chart} />
-            <div className="overview-detail overview-detail--api">
-              <AiContent text={content} streaming={followUpLoading} />
-            </div>
-          </>
-        )}
-        {content && activeTopic !== 'overview' && (
-          <AiContent text={content} streaming={followUpLoading} />
-        )}
-      </div>
+        </div>
 
-      <div className="insight-ai-input">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={followUp}
-            onChange={e => setFollowUp(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleFollowUp()}
-            placeholder="继续追问，如：今年的事业格局有什么特点？"
-            disabled={followUpLoading || loading}
-          />
+        {selectionBubble && (
           <button
             type="button"
-            onClick={handleFollowUp}
-            disabled={followUpLoading || loading || !followUp.trim()}
+            className="insight-followup-bubble"
+            style={{
+              top: selectionBubble.top,
+              left: selectionBubble.left,
+            }}
+            onMouseDown={event => event.preventDefault()}
+            onClick={handleSelectionFollowUp}
           >
-            {followUpLoading ? '…' : '追问'}
+            追问这点
           </button>
+        )}
+
+        <div ref={bodyRef} className="insight-analysis-body insight-analysis-body--selectable">
+          {!content && (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="text-4xl mb-3" style={{ color: 'var(--t-gold)', opacity: 0.1 }}>✦</div>
+              <p className="insight-loading-text animate-pulse">命格解读生成中…</p>
+            </div>
+          )}
+          {content && activeTopic === 'overview' && !followUpLoading && !content.startsWith('正在生成') && (
+            <OverviewVisual
+              chart={chart}
+              text={content}
+              timeView={timeView}
+              liunianYear={liunianYear}
+              liuyueMonth={liuyueMonth}
+              liuriDay={liuriDay}
+              liushiHour={liushiHour}
+            />
+          )}
+          {content && activeTopic !== 'overview' && (
+            <>
+              {headline && (
+                <h2 className="insight-headline">{headline}</h2>
+              )}
+              <div className="insight-kicker mb-2 flex items-center gap-1.5">
+                <span className="insight-kicker-mark">✦</span>
+                命理解读
+              </div>
+              <AiContent text={content} streaming={followUpLoading} />
+            </>
+          )}
         </div>
+
+        <div className="insight-ai-input">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={followUp}
+              onChange={e => setFollowUp(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleFollowUp()}
+              placeholder="继续追问，如：今年的事业格局有什么特点？"
+              disabled={followUpLoading || loading}
+            />
+            <button
+              type="button"
+              onClick={handleFollowUp}
+              disabled={followUpLoading || loading || !followUp.trim()}
+            >
+              {followUpLoading ? '…' : '追问'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className={panelMode === 'chat' ? 'insight-chat-pane' : 'insight-chat-pane insight-chat-pane--hidden'}>
+        <ChatPanel ref={chatPanelRef} chart={chart} embedded />
       </div>
     </div>
   );

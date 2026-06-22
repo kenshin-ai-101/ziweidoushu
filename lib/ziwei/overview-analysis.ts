@@ -320,6 +320,11 @@ function buildTemporalSihua(chart: ZiweiChart, options?: OverviewAnalysisOptions
   ].join('\n');
 }
 
+/** 时间层四化附录（大限/流年/流月/流日/流时）— 供非 overview 主题复用 */
+export function buildTemporalSihuaAppendix(chart: ZiweiChart, options?: OverviewAnalysisOptions): string {
+  return buildTemporalSihua(chart, options);
+}
+
 function buildDualStarBlock(starNames: string[]) {
   const combo = findDualCombo(starNames);
   if (!combo?.topics.mingGong) return '';

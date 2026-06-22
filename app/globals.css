@@ -532,6 +532,21 @@ body:has(.chart-page-root) {
 .insight-panel-root--chat {
   padding-bottom: 0 !important;
 }
+.insight-analysis-pane,
+.insight-chat-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.insight-analysis-pane--hidden,
+.insight-chat-pane--hidden {
+  display: none !important;
+}
+.insight-chat-pane .insight-chat-embedded {
+  flex: 1;
+  min-height: 0;
+}
 .insight-flip-bar {
   display: flex;
   align-items: center;
@@ -692,6 +707,33 @@ body:has(.chart-page-root) {
   color: var(--tx-3);
   font-size: 13px;
 }
+.insight-analysis-body--selectable {
+  user-select: text;
+  -webkit-user-select: text;
+}
+.insight-followup-bubble {
+  position: fixed;
+  z-index: 120;
+  transform: translateX(-50%);
+  appearance: none;
+  border: 1px solid var(--bdr-med);
+  border-radius: 999px;
+  background: var(--bg-0, #fff);
+  color: var(--tx-0);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 8px 14px;
+  box-shadow: var(--sh-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.insight-followup-bubble:hover,
+.insight-followup-bubble:focus-visible {
+  background: var(--bg-1, #f5f5f5);
+  border-color: var(--bdr-heavy);
+  color: var(--tx-0);
+}
 .overview-visual {
   padding-top: 8px;
   color: var(--tx-0);
@@ -798,38 +840,6 @@ body:has(.chart-page-root) {
 .overview-detail {
   margin-top: 24px;
   color: var(--tx-1);
-}
-.overview-detail--api {
-  border-top: 1px solid rgba(0, 0, 0, 0.07);
-  padding-top: 10px;
-}
-.overview-detail--api .insight-section-title {
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.overview-detail--api .insight-section-title--overview {
-  font-size: 18px;
-}
-.overview-detail--api .insight-section-title--h2 {
-  font-size: 16px;
-  color: var(--tx-0);
-}
-.overview-detail--api .insight-body-line {
-  font-size: 14px;
-  line-height: 1.78;
-}
-.overview-detail--api .insight-body-line--quote {
-  margin: 8px 0 10px;
-  border-left: 3px solid rgba(86, 91, 206, 0.35);
-  background: rgba(86, 91, 206, 0.045);
-  padding: 8px 10px;
-  color: var(--tx-1);
-}
-.overview-detail--api .insight-separator {
-  height: 1px;
-  margin: 18px 0 4px;
-  background: rgba(0, 0, 0, 0.08);
 }
 .overview-audit {
   display: flex;
@@ -1086,6 +1096,13 @@ body:has(.chart-page-root) {
 .insight-ai-input button:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+.insight-chat-quota {
+  font-size: 11px;
+  color: var(--tx-3);
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+  padding: 0 2px;
 }
 .insight-chat-messages {
   flex-grow: 0;

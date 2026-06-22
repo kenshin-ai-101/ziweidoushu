@@ -66,12 +66,17 @@ async function main() {
 
   const interpretRes = await fetch(`${BASE}/api/interpret`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Quota-Prefer': 'bonus',
+    },
     body: JSON.stringify({
       chart,
+      chartToken: token,
       messages: [{ role: 'user', content: '用一句话概括命格' }],
     }),
   });
+  const quotaRemaining = interpretRes.headers.get('X-Quota-Remaining');
   let streamOk = interpretRes.ok && interpretRes.body;
   let streamText = '';
   if (streamOk) {
@@ -92,7 +97,7 @@ async function main() {
     reader.cancel().catch(() => {});
   }
   console.log(
-    `5. POST /api/interpret  ${streamOk && streamText ? '✓' : '✗'} stream「${streamText.slice(0, 40)}…」`,
+    `5. POST /api/interpret  ${streamOk && streamText ? '✓' : '✗'} quota=${quotaRemaining ?? '?'} stream「${streamText.slice(0, 40)}…」`,
   );
 
   const allOk = tabs.data?.source === 'db' && tabCount === 13 && analysis.ok && streamText;
