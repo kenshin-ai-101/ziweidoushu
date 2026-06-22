@@ -323,11 +323,6 @@ function AiContent({ text, streaming }: { text: string; streaming?: boolean }) {
   );
 }
 
-function extractHeadline(text: string): string | null {
-  const match = text.match(/\*\*【一句话定调】\*\*\s*\n(.+?)(?:\n|$)/);
-  return match?.[1]?.trim() ?? null;
-}
-
 async function fetchAnalysis(
   chart: ZiweiChart,
   topic: TopicKey,
@@ -345,7 +340,7 @@ async function fetchAnalysis(
   const res = await fetch('/api/analysis', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chart, chartToken, topic, options }),
+    body: JSON.stringify({ chart, chartToken, topic, options, userId: 'anon' }),
   });
 
   if (!res.ok) {
@@ -428,26 +423,19 @@ export default function InsightPanel({
     let cancelled = false;
 
     const timer = setTimeout(async () => {
-      try {
-        const res = await fetch('/api/lookup-tabs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chart, chartToken }),
-        });
-        if (cancelled || !res.ok) return;
-        const data = await res.json();
-        if (data?.source === 'db' && data.tabs) {
-          const seededTabs = Object.fromEntries(
-            Object.entries(data.tabs as Record<TopicKey, string>).map(([topic, text]) => [
-              makeAnalysisCacheKey(topic as TopicKey, analysisOptions),
-              text,
-            ]),
-          );
-          setTabCache(prev => ({ ...seededTabs, ...prev }));
-          const current = activeTopicRef.current;
-          if (data.tabs[current] && analysisOptions.view === 'mingpan') setContent(data.tabs[current]);
-        }
-      } catch { /* fallback */ }
+      const current = activeTopicRef.current;
+      const queue = CHART_TOPIC_TABS_ALL.map(t => t.key).filter(topic => topic !== current);
+      for (let i = 0; i < queue.length; i += 2) {
+        if (cancelled) return;
+        await Promise.all(queue.slice(i, i + 2).map(async topic => {
+          const cacheKey = makeAnalysisCacheKey(topic, analysisOptions);
+          if (tabCacheRef.current[cacheKey]) return;
+          try {
+            const text = await fetchAnalysis(chart, topic, analysisOptions);
+            if (!cancelled) setTabCache(prev => ({ ...prev, [cacheKey]: text }));
+          } catch { /* keep lazy fallback on click */ }
+        }));
+      }
     }, 400);
 
     return () => {
@@ -595,8 +583,6 @@ export default function InsightPanel({
     );
   }
 
-  const headline = activeTopic === 'overview' ? extractHeadline(content) : null;
-
   return (
     <div className="insight-panel-root">
       <div className="insight-flip-bar">
@@ -639,16 +625,7 @@ export default function InsightPanel({
           </>
         )}
         {content && activeTopic !== 'overview' && (
-          <>
-            {headline && (
-              <h2 className="insight-headline">{headline}</h2>
-            )}
-            <div className="insight-kicker mb-2 flex items-center gap-1.5">
-              <span className="insight-kicker-mark">✦</span>
-              命理解读
-            </div>
-            <AiContent text={content} streaming={followUpLoading} />
-          </>
+          <AiContent text={content} streaming={followUpLoading} />
         )}
       </div>
 

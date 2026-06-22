@@ -18,6 +18,8 @@ export async function POST(req: NextRequest) {
     const chartToken = body.chartToken as string | undefined;
     const topic = body.topic as TopicKey | undefined;
     const options = body.options;
+    const userId = typeof body.userId === 'string' ? body.userId : undefined;
+    void userId;
 
     if (!chart?.birthInfo || !topic || !VALID_TOPICS.has(topic)) {
       return NextResponse.json({ error: '参数无效' }, { status: 400 });
