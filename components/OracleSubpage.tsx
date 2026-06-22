@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { MembershipEditionButton } from '@/components/MembershipEditionButton';
 import { cloneElement, isValidElement, useEffect } from 'react';
 import { OracleFooter } from '@/components/OracleFooter';
 import BirthForm from '@/components/BirthForm';
@@ -110,7 +111,7 @@ export function OracleChrome({
               <Link className="oracle-subpage-pill" href="/chart">起盘</Link>
               <span aria-hidden="true">·</span>
               <Link className="oracle-subpage-pill" href="/heming">合盘</Link>
-              <button type="button" className="oracle-subpage-actions-edition">普通版</button>
+              <MembershipEditionButton variant="oracle" />
             </nav>
             <button type="button" className="oracle-subpage-burger" aria-label="菜单">☰</button>
           </div>

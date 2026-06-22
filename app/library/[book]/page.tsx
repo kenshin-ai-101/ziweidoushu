@@ -96,7 +96,7 @@ function UnlockedBookPage({ book }: { book: Book }) {
 
   return (
     <div className="metis-library-page">
-      <MetisLibraryHeader editionLabel="专业版" editionHref="/subscription?pro=1" />
+      <MetisLibraryHeader />
 
       <main className="metis-library-main">
         <section className="metis-library-hero metis-library-hero--book">
@@ -128,7 +128,7 @@ function UnlockedBookPage({ book }: { book: Book }) {
             {book.chapters.map((chapter, i) => (
               <Link
                 key={i}
-                href={`/library/${book.slug}/${i}?pro=1`}
+                href={`/library/${book.slug}/${i}`}
                 className="metis-chapter-link"
               >
                 <span className="metis-library-index">

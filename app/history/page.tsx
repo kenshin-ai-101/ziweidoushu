@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import HistoryClient from './HistoryClient';
+import { MembershipEditionButton } from '@/components/MembershipEditionButton';
 
 export const metadata = {
   title: '历史命盘 · Metis',
@@ -17,7 +18,7 @@ export default function HistoryPage() {
           <Link className="obys-pill-link" href="/chart">起盘</Link>
           <span className="metis-library-nav-dot">·</span>
           <Link className="obys-pill-link" href="/heming">合盘</Link>
-          <Link className="metis-library-edition" href="/subscription">普通版</Link>
+          <MembershipEditionButton variant="library" />
         </nav>
       </header>
 

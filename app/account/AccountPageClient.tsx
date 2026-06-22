@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import type { AccountQuotaResponse } from '@/lib/auth/account-quota';
 import {
   encodeClientPassword,
+  applyAuthUser,
+  getMembershipStatusLabel,
   invalidateAuthCache,
   maskPhone,
 } from '@/lib/auth/client';
@@ -213,13 +215,14 @@ function BindChannelRow({
         credentials: 'include',
         body: JSON.stringify(payload),
       });
-      const data = await res.json().catch(() => ({})) as { success?: boolean; error?: string };
+      const data = await res.json().catch(() => ({})) as { success?: boolean; error?: string; user?: import('@/lib/auth/types').PublicUser };
       if (!res.ok || !data.success) throw new Error(data.error || '绑定失败');
 
       setMessage({ type: 'ok', text: `已${hasCurrent ? '更换' : '绑定'}${label}` });
       resetForm();
       setOpen(false);
-      invalidateAuthCache();
+      if (data.user) applyAuthUser(data.user);
+      else invalidateAuthCache();
       onDone();
     } catch (err) {
       setMessage({ type: 'err', text: err instanceof Error ? err.message : '绑定失败，请重试' });
@@ -365,7 +368,9 @@ export default function AccountPageClient({
       active = false;
       unsubscribe();
     };
-  }, [isLoggedIn]);
+  }, [isLoggedIn, isPro]);
+
+  const membershipLabel = getMembershipStatusLabel(isPro);
 
   const logout = async () => {
     if (loggingOut) return;
@@ -476,7 +481,7 @@ export default function AccountPageClient({
           <div style={sectionTitleStyle}>账户信息</div>
           <InfoRow label="登录邮箱" value={user.email || '未绑定'} muted={!user.email} />
           <InfoRow label="登录手机" value={user.phone ? maskPhone(user.phone) : '未绑定'} muted={!user.phone} />
-          <InfoRow label="会员状态" value={isPro ? '专业版 · 永久' : '免费版'} badge={isPro} />
+          <InfoRow label="会员状态" value={membershipLabel} badge={isPro} />
         </section>
 
         <section style={cardStyle}>

@@ -1,6 +1,7 @@
 'use client';
-import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { useState, useCallback, useRef } from 'react';
+import { MembershipEditionButton } from '@/components/MembershipEditionButton';
 import BirthForm, { type BirthFormState } from '@/components/BirthForm';
 import LoginModal from '@/components/LoginModal';
 import { useAuth } from '@/hooks/use-auth';
@@ -282,7 +283,7 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
               <span style={{ color: '#d4d4d4', fontSize: '10px' }}>·</span>
               <Link className="heming-pill-link" href="/heming">合盘</Link>
             </span>
-            <button type="button" className="heming-obys-btn">普通版</button>
+            <MembershipEditionButton variant="heming" />
             <button aria-label="打开菜单" aria-expanded="false" className="heming-nav-burger">☰</button>
           </div>
         </div>

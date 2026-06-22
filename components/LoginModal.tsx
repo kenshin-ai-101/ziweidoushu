@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@/components/ThemeProvider';
-import { encodeClientPassword, invalidateAuthCache } from '@/lib/auth/client';
+import { encodeClientPassword, applyAuthUser, fetchCurrentUser, invalidateAuthCache } from '@/lib/auth/client';
+import type { PublicUser } from '@/lib/auth/types';
 import { showOracleToast } from '@/components/OracleToast';
 
 type LoginTab = 'phone' | 'login' | 'register';
@@ -144,9 +145,11 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
         credentials: 'include',
         body: JSON.stringify({ phone, code }),
       });
-      const data = await res.json().catch(() => ({})) as { success?: boolean; error?: string; isNewUser?: boolean };
+      const data = await res.json().catch(() => ({})) as { success?: boolean; error?: string; isNewUser?: boolean; user?: PublicUser };
       if (!res.ok || !data.success) throw new Error(data.error ?? '登录失败，请检查验证码');
-      invalidateAuthCache();
+      if (data.user) applyAuthUser(data.user);
+      else invalidateAuthCache();
+      await fetchCurrentUser();
       setSuccessText(data.isNewUser ? '注册成功' : '登录成功');
       window.setTimeout(() => {
         onSuccess?.();
@@ -203,9 +206,11 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
         credentials: 'include',
         body: JSON.stringify({ email, p: encodeClientPassword(password) }),
       });
-      const data = await res.json().catch(() => ({})) as { success?: boolean; error?: string };
+      const data = await res.json().catch(() => ({})) as { success?: boolean; error?: string; user?: PublicUser };
       if (!res.ok || !data.success) throw new Error(data.error ?? '登录失败，请检查邮箱或密码');
-      invalidateAuthCache();
+      if (data.user) applyAuthUser(data.user);
+      else invalidateAuthCache();
+      await fetchCurrentUser();
       setSuccessText('登录成功');
       window.setTimeout(() => {
         onSuccess?.();
@@ -245,9 +250,11 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
         credentials: 'include',
         body: JSON.stringify({ email, p: encodeClientPassword(password), code }),
       });
-      const data = await res.json().catch(() => ({})) as { success?: boolean; error?: string };
+      const data = await res.json().catch(() => ({})) as { success?: boolean; error?: string; user?: PublicUser };
       if (!res.ok || !data.success) throw new Error(data.error ?? '注册失败，请稍后重试');
-      invalidateAuthCache();
+      if (data.user) applyAuthUser(data.user);
+      else invalidateAuthCache();
+      await fetchCurrentUser();
       setSuccessText('注册成功');
       window.setTimeout(() => {
         onSuccess?.();

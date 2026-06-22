@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { MembershipEditionButton } from '@/components/MembershipEditionButton';
 
 const NAV_ITEMS = [
   { href: '/chart', label: '起盘' },
@@ -10,15 +11,7 @@ const NAV_ITEMS = [
   { href: '/library', label: '古籍库' },
 ];
 
-type MetisLibraryHeaderProps = {
-  editionLabel?: string;
-  editionHref?: string;
-};
-
-export function MetisLibraryHeader({
-  editionLabel = '普通版',
-  editionHref = '/subscription',
-}: MetisLibraryHeaderProps) {
+export function MetisLibraryHeader() {
   const [open, setOpen] = useState(false);
 
   return (
@@ -49,9 +42,7 @@ export function MetisLibraryHeader({
             <span className="metis-library-nav-dot">·</span>
             <Link className="obys-pill-link" href="/heming">合盘</Link>
           </span>
-          <Link className="metis-library-edition" href={editionHref}>
-            {editionLabel}
-          </Link>
+          <MembershipEditionButton variant="library" />
           <button
             type="button"
             aria-label={open ? '关闭菜单' : '打开菜单'}

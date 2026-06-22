@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect } from 'react';
+import { MembershipEditionButton } from '@/components/MembershipEditionButton';
+import { useAuth } from '@/hooks/use-auth';
 import type { NiModule } from '@/lib/nihai';
 import {
   getCategoryConfig,
@@ -86,21 +88,7 @@ function MetisHeader() {
               合盘
             </Link>
           </span>
-          <button
-            type="button"
-            className="obys-btn obys-btn--primary"
-            style={{
-              fontSize: 'clamp(11px, 1.1vw, 13px)',
-              padding: 'clamp(4px, 0.5vw, 5px) clamp(10px, 1.2vw, 14px)',
-              marginLeft: 'clamp(4px, 0.6vw, 8px)',
-              background: '#fff',
-              color: '#1a1a1a',
-              borderColor: 'rgba(0,0,0,0.28)',
-              fontWeight: 500,
-            }}
-          >
-            普通版
-          </button>
+          <MembershipEditionButton variant="obys" />
         </div>
       </div>
     </header>
@@ -108,6 +96,7 @@ function MetisHeader() {
 }
 
 export function SanjiModulePage({ module }: { module: NiModule }) {
+  const { isPro } = useAuth();
   const category = getCategoryConfig(module.category);
   const siblings = getSiblingModules(module);
   const nextSteps = getModuleNextSteps(module);
@@ -241,6 +230,7 @@ export function SanjiModulePage({ module }: { module: NiModule }) {
         </section>
 
         <div className="max-w-3xl mx-auto px-6 pb-20">
+          {!isPro ? (
           <div
             style={{
               textAlign: 'center',
@@ -290,6 +280,32 @@ export function SanjiModulePage({ module }: { module: NiModule }) {
               </Link>
             </div>
           </div>
+          ) : (
+          <div style={{ margin: '12px auto 32px', maxWidth: 720 }}>
+            <div style={{ fontSize: 12, letterSpacing: '0.3em', color: 'var(--tx-3)', marginBottom: 12 }}>专业版已解锁 · 章节目录</div>
+            <div className="space-y-3">
+              {module.chapters.map((chapter, index) => (
+                <div
+                  key={chapter.id}
+                  style={{
+                    padding: '16px 18px',
+                    border: '1px solid var(--bdr)',
+                    borderRadius: 12,
+                    background: 'var(--bg-card)',
+                  }}
+                >
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--tx-0)', marginBottom: 6 }}>
+                    {String(index + 1).padStart(2, '0')} · {chapter.title}
+                  </div>
+                  {chapter.subtitle && (
+                    <div style={{ fontSize: 13, color: 'var(--tx-3)', marginBottom: 8 }}>{chapter.subtitle}</div>
+                  )}
+                  <p style={{ fontSize: 14, color: 'var(--tx-2)', lineHeight: 1.75, margin: 0 }}>{chapter.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          )}
 
           <div
             className="rounded-lg px-5 py-4"

@@ -96,7 +96,7 @@ export default async function ChapterPage({
 
   return (
     <div className="metis-library-page">
-      <MetisLibraryHeader editionLabel="专业版" editionHref="/subscription?pro=1" />
+      <MetisLibraryHeader />
       <main className="metis-library-main">
         <section className="metis-library-hero metis-library-hero--chapter">
           <div>
@@ -104,7 +104,7 @@ export default async function ChapterPage({
             <h1 className="metis-library-chapter-title">{chapter.title}</h1>
             {chapter.subtitle && <p className="metis-library-desc">{chapter.subtitle}</p>}
             <div className="metis-library-meta-row">
-              <Link className="metis-library-chip" href={`/library/${book.slug}?pro=1`}>← 《{book.title}》目录</Link>
+              <Link className="metis-library-chip" href={`/library/${book.slug}`}>← 《{book.title}》目录</Link>
               <span className="metis-library-chip">{book.dynasty}</span>
               <span className="metis-library-chip">{String(chapterIdx + 1).padStart(2, '0')} / {book.chapters.length}</span>
               <span className="metis-library-chip">专业版已解锁</span>
@@ -142,13 +142,13 @@ export default async function ChapterPage({
 
         <nav className="metis-chapter-nav" aria-label="章节导航">
           {prevIdx >= 0 ? (
-            <Link href={`/library/${book.slug}/${prevIdx}?pro=1`}>
+            <Link href={`/library/${book.slug}/${prevIdx}`}>
               <span>← 上一章</span>
               <strong>{book.chapters[prevIdx].title}</strong>
             </Link>
           ) : <div className="metis-chapter-nav-placeholder" />}
           {nextIdx < book.chapters.length ? (
-            <Link href={`/library/${book.slug}/${nextIdx}?pro=1`}>
+            <Link href={`/library/${book.slug}/${nextIdx}`}>
               <span>下一章 →</span>
               <strong>{book.chapters[nextIdx].title}</strong>
             </Link>

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { MetisLibraryHeader } from '@/components/MetisLibraryHeader';
 import { ALL_STARS, STAR_BRIEF_SEO, STAR_TO_SLUG } from '@/lib/seo/knowledge';
 import { ALL_BOOKS, TOTAL_PARAGRAPHS, type Book } from '@/lib/classics';
 
@@ -30,54 +31,6 @@ const CLASSIC_GROUPS = [
   },
 ] as const;
 
-function MetisHeader() {
-  return (
-    <header className="metis-library-header">
-      <Link className="metis-library-logo" aria-label="回到首页" href="/">
-        METIS
-      </Link>
-      <nav className="metis-library-nav" aria-label="主导航">
-        <Link
-          className="obys-pill-link"
-          style={{
-            fontSize: 'clamp(11px, 1.1vw, 13px)',
-            padding: 'clamp(3px, 0.4vw, 4px) clamp(6px, 1vw, 10px)',
-          }}
-          href="/chart"
-        >
-          起盘
-        </Link>
-        <span style={{ color: '#d4d4d4', fontSize: 'var(--fs-10)' }}>·</span>
-        <Link
-          className="obys-pill-link"
-          style={{
-            fontSize: 'clamp(11px, 1.1vw, 13px)',
-            padding: 'clamp(3px, 0.4vw, 4px) clamp(6px, 1vw, 10px)',
-          }}
-          href="/heming"
-        >
-          合盘
-        </Link>
-        <button
-          type="button"
-          className="obys-btn obys-btn--primary"
-          style={{
-            fontSize: 'clamp(11px, 1.1vw, 13px)',
-            padding: 'clamp(4px, 0.5vw, 5px) clamp(10px, 1.2vw, 14px)',
-            marginLeft: 'clamp(4px, 0.6vw, 8px)',
-            background: '#fff',
-            color: '#1a1a1a',
-            borderColor: 'rgba(0,0,0,0.28)',
-            fontWeight: 500,
-          }}
-        >
-          普通版
-        </button>
-      </nav>
-    </header>
-  );
-}
-
 function BookCard({ book }: { book: Book }) {
   const paragraphs = book.chapters.reduce((sum, chapter) => sum + chapter.paragraphs.length, 0);
 
@@ -103,7 +56,7 @@ export default function Page() {
 
   return (
     <div className="metis-academy-page">
-      <MetisHeader />
+      <MetisLibraryHeader />
 
       <main className="metis-academy-main">
         <section className="metis-academy-hero-wrap">

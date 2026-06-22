@@ -22,6 +22,11 @@ export function useAuth() {
     }
 
     const refresh = () => {
+      const cached = readCachedUser();
+      if (cached) {
+        setUser(cached);
+        setLoading(false);
+      }
       fetchCurrentUser().then(next => {
         if (active) {
           setUser(next);

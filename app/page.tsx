@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import LoginModal from '@/components/LoginModal';
+import { MembershipEditionButton } from '@/components/MembershipEditionButton';
 import { useAuth } from '@/hooks/use-auth';
 
 type ViewMode = 'vertical' | 'horizontal' | 'grid';
@@ -111,7 +112,7 @@ function OracleFrame({ width, height, pulseKey }: { width: number; height: numbe
 
 export default function HomePage() {
   const router = useRouter();
-  const { isLoggedIn, isPro, loading: authLoading } = useAuth();
+  const { isLoggedIn, loading: authLoading } = useAuth();
   const [loginOpen, setLoginOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [hovered, setHovered] = useState<number | null>(null);
@@ -219,14 +220,7 @@ export default function HomePage() {
                 <button className="oracle-pill-link" type="button" onClick={() => setLoginOpen(true)}>登录</button>
               )
             )}
-            <button
-              className="oracle-pro"
-              type="button"
-              onClick={() => router.push('/subscription')}
-              style={authLoading ? { opacity: 0.5, pointerEvents: 'none' } : isPro ? { background: '#1a1a1a', color: '#d4a843', borderColor: '#d4a843', fontWeight: 700 } : undefined}
-            >
-              {authLoading ? '…' : isPro ? '专业版' : '普通版'}
-            </button>
+            <MembershipEditionButton variant="home" />
           </div>
         </div>
       </header>

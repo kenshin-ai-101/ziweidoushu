@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import LoginModal from '@/components/LoginModal';
+import { MembershipEditionButton } from '@/components/MembershipEditionButton';
 import { PlanBenefitIcon } from '@/components/subscription/PlanBenefitIcon';
-import { invalidateAuthCache } from '@/lib/auth/client';
+import { applyAuthUser, invalidateAuthCache, fetchCurrentUser } from '@/lib/auth/client';
+import type { PublicUser } from '@/lib/auth/types';
 import { useAuth } from '@/hooks/use-auth';
 import {
   FREE_PLAN_BENEFITS,
@@ -32,12 +34,18 @@ export default function SubscriptionPageClient() {
   const [message, setMessage] = useState<string | null>(null);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
 
-  const editionLabel = authLoading ? '…' : isPro ? '专业版' : '普通版';
-
   const afterAuthSuccess = useCallback(() => {
-    invalidateAuthCache();
     setLoginOpen(false);
   }, []);
+
+  const syncUserFromResponse = async (data: { user?: PublicUser | null }) => {
+    if (data.user) {
+      applyAuthUser(data.user);
+      return;
+    }
+    invalidateAuthCache();
+    await fetchCurrentUser();
+  };
 
   const checkout = async () => {
     if (!isLoggedIn) {
@@ -61,13 +69,13 @@ export default function SubscriptionPageClient() {
         orderId?: string;
         message?: string;
         error?: string;
-        user?: unknown;
+        user?: PublicUser;
       };
       if (!res.ok) {
         throw new Error(data.error || '创建订单失败');
       }
       if (data.orderId) setPendingOrderId(data.orderId);
-      invalidateAuthCache();
+      await syncUserFromResponse(data);
       if (data.status === 'paid' || data.success) {
         setMessage(data.message || '专业版已开通');
         window.setTimeout(() => router.push(redirect), 800);
@@ -100,6 +108,7 @@ export default function SubscriptionPageClient() {
         status?: string;
         message?: string;
         error?: string;
+        user?: PublicUser;
       };
       if (data.status === 'not_found') {
         setMessage(data.message || '未找到待支付订单');
@@ -108,7 +117,7 @@ export default function SubscriptionPageClient() {
       if (!res.ok || !data.success) {
         throw new Error(data.error || data.message || '查询失败');
       }
-      invalidateAuthCache();
+      await syncUserFromResponse(data);
       setMessage(data.message || '专业版已开通');
       window.setTimeout(() => router.push(redirect), 800);
     } catch (err) {
@@ -161,23 +170,7 @@ export default function SubscriptionPageClient() {
           <Link className="obys-pill-link" style={{ fontSize: 'clamp(11px, 1.1vw, 13px)', padding: 'clamp(3px, 0.4vw, 4px) clamp(6px, 1vw, 10px)' }} href="/account">
             账户
           </Link>
-          <button
-            type="button"
-            className="obys-btn obys-btn--primary"
-            onClick={() => router.push('/subscription')}
-            style={{
-              fontSize: 'clamp(11px, 1.1vw, 13px)',
-              padding: 'clamp(4px, 0.5vw, 5px) clamp(10px, 1.2vw, 14px)',
-              marginLeft: 'clamp(4px, 0.6vw, 8px)',
-              background: isPro ? '#1a1a1a' : '#fff',
-              color: isPro ? '#d4a843' : '#1a1a1a',
-              borderColor: isPro ? '#d4a843' : 'rgba(0,0,0,0.28)',
-              fontWeight: isPro ? 700 : 500,
-              cursor: 'pointer',
-            }}
-          >
-            {editionLabel}
-          </button>
+          <MembershipEditionButton variant="home" />
         </div>
       </header>
 

@@ -32,6 +32,21 @@ export function invalidateAuthCache(): void {
   listeners.forEach(listener => listener());
 }
 
+/** 写入本地用户缓存并通知所有 useAuth 订阅方（登录/开通专业版后立刻刷新 UI） */
+export function applyAuthUser(user: PublicUser | null | undefined): void {
+  writeCachedUser(user ?? null);
+  invalidateAuthCache();
+}
+
+export function getMembershipEditionLabel(isPro: boolean, loading = false): string {
+  if (loading) return '…';
+  return isPro ? '专业版' : '普通版';
+}
+
+export function getMembershipStatusLabel(isPro: boolean): string {
+  return isPro ? '专业版 · 永久' : '免费版';
+}
+
 export function subscribeAuth(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);

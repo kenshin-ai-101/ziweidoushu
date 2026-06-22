@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { MembershipEditionButton } from '@/components/MembershipEditionButton';
 import { useEffect, useMemo, useState } from 'react';
 import { ALL_STARS, ALL_TOPICS, getKnowledge, STAR_BRIEF_SEO, STAR_TO_SLUG } from '@/lib/seo/knowledge';
 import { TOPIC_PALACE_NAME } from '@/lib/ziwei/db-analysis';
@@ -132,21 +133,7 @@ function MetisHeader() {
               合盘
             </Link>
           </span>
-          <button
-            type="button"
-            className="obys-btn obys-btn--primary"
-            style={{
-              fontSize: 'clamp(11px, 1.1vw, 13px)',
-              padding: 'clamp(4px, 0.5vw, 5px) clamp(10px, 1.2vw, 14px)',
-              marginLeft: 'clamp(4px, 0.6vw, 8px)',
-              background: '#fff',
-              color: '#1a1a1a',
-              borderColor: 'rgba(0,0,0,0.28)',
-              fontWeight: 500,
-            }}
-          >
-            普通版
-          </button>
+          <MembershipEditionButton variant="obys" />
         </div>
       </div>
     </header>
