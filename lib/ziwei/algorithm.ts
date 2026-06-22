@@ -190,6 +190,8 @@ export function generateChart(birthInfo: BirthInfo): ZiweiChart {
     daXians,
     currentAge,
     currentDaXianIndex,
+    soulMaster: (astrolabe.soul as string) || undefined,
+    bodyMaster: (astrolabe.body as string) || undefined,
   };
 
   return {

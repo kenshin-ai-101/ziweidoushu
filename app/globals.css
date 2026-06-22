@@ -663,35 +663,40 @@ body:has(.chart-page-root) {
   overflow: visible !important;
   min-height: auto !important;
   color: var(--tx-1);
+  font-size: 16px;
+  line-height: 1.85;
+  text-align: left;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", var(--font-sans, var(--font));
 }
 .insight-body-line {
   color: var(--tx-2);
-  font-size: 14px;
-  line-height: 1.75;
+  font-size: 16px;
+  line-height: 1.85;
 }
 .insight-body-line strong {
-  color: var(--tx-0);
+  color: var(--tx-1);
   font-weight: 600;
 }
 .insight-section-title {
   font-size: 18px;
   font-weight: 600;
-  color: var(--tx-0);
+  color: var(--tx-1);
   letter-spacing: -0.01em;
 }
 .insight-section-title--overview {
   font-size: 22px;
+  color: var(--tx-1);
 }
 .insight-section-title--h2 {
   font-size: 15px;
   font-weight: 600;
+  color: var(--tx-1);
 }
 .insight-inline-marker {
-  color: var(--tx-0);
-  font-size: 14px;
+  color: var(--tx-1);
+  font-size: 18px;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: -0.01em;
 }
 .insight-kicker {
   color: var(--tx-3);
@@ -869,7 +874,7 @@ body:has(.chart-page-root) {
 }
 .overview-section h3 {
   margin: 0 0 10px;
-  color: var(--tx-0);
+  color: var(--tx-1);
   font-size: 18px;
   font-weight: 600;
   line-height: 1.35;
@@ -878,8 +883,8 @@ body:has(.chart-page-root) {
 .overview-section p {
   margin: 0 0 10px;
   color: var(--tx-2);
-  font-size: 14px;
-  line-height: 1.75;
+  font-size: 16px;
+  line-height: 1.85;
 }
 .overview-callout {
   margin-top: 8px;
@@ -892,10 +897,10 @@ body:has(.chart-page-root) {
   font-size: 16px;
 }
 .overview-callout p {
-  color: var(--tx-0);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.75;
+  color: var(--tx-2);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.85;
 }
 .overview-proof-grid {
   display: grid;
@@ -918,8 +923,8 @@ body:has(.chart-page-root) {
 }
 .overview-proof-grid p {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.75;
+  font-size: 16px;
+  line-height: 1.85;
 }
 .overview-sihua-row {
   display: grid;
@@ -943,8 +948,8 @@ body:has(.chart-page-root) {
 }
 .overview-sihua-row p {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.75;
+  font-size: 16px;
+  line-height: 1.85;
 }
 .overview-sihua-row--禄 > span {
   background: rgba(22, 163, 74, 0.08);
@@ -1020,8 +1025,8 @@ body:has(.chart-page-root) {
 .overview-toggle-body p {
   margin: 0 0 10px;
   color: var(--tx-2);
-  font-size: 14px;
-  line-height: 1.8;
+  font-size: 16px;
+  line-height: 1.85;
 }
 .overview-risk {
   margin-top: 16px;
@@ -1057,7 +1062,8 @@ body:has(.chart-page-root) {
 }
 .overview-combo-card p {
   margin: 0;
-  font-size: 14px;
+  font-size: 16px;
+  line-height: 1.85;
 }
 .insight-ai-input {
   flex-shrink: 0;

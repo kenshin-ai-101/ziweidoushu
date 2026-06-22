@@ -548,7 +548,7 @@ function AiSection({
   }
 
   return (
-    <div style={{ paddingTop: index === 0 ? 0 : isH2 ? 20 : 18, paddingBottom: 6 }}>
+    <div style={{ paddingTop: index === 0 ? 0 : 18, paddingBottom: 6 }}>
       <div
         role={section.collapsible ? 'button' : undefined}
         tabIndex={section.collapsible ? 0 : undefined}
@@ -571,7 +571,7 @@ function AiSection({
                 : 'insight-section-title'
           }
         >
-          {section.title.startsWith('【') ? section.title : `【${section.title}】`}
+          {section.title}
         </span>
         {section.collapsible && (
           <span className="insight-section-chevron" style={{ transform: open ? 'rotate(90deg)' : 'none' }}>
@@ -593,7 +593,7 @@ function AiLine({ line, streaming }: { line: string; streaming?: boolean }) {
     return (
       <div className="pt-2 pb-0.5">
         <span className="insight-inline-marker">
-          【{sectionMatch[1]}】
+          {sectionMatch[1]}
         </span>
       </div>
     );
@@ -656,17 +656,12 @@ function parseSections(text: string) {
 function AiContent({ text, streaming }: { text: string; streaming?: boolean }) {
   const sections = parseSections(text);
   return (
-    <div className={`space-y-0.5${streaming ? ' ai-streaming' : ''}`}>
+    <div className={`space-y-1${streaming ? ' ai-streaming' : ''}`}>
       {sections.map((section, i) => (
         <AiSection key={i} section={section} index={i} streaming={streaming} />
       ))}
     </div>
   );
-}
-
-function extractHeadline(text: string): string | null {
-  const match = text.match(/\*\*【一句话定调】\*\*\s*\n(.+?)(?:\n|$)/);
-  return match?.[1]?.trim() ?? null;
 }
 
 async function fetchAnalysis(
@@ -1000,8 +995,6 @@ export default function InsightPanel({
     });
   };
 
-  const headline = activeTopic === 'overview' ? extractHeadline(content) : null;
-
   return (
     <div className={`insight-panel-root${panelMode === 'chat' ? ' insight-panel-root--chat' : ''}`}>
       <div className="insight-flip-bar">
@@ -1075,16 +1068,7 @@ export default function InsightPanel({
             />
           )}
           {content && activeTopic !== 'overview' && (
-            <>
-              {headline && (
-                <h2 className="insight-headline">{headline}</h2>
-              )}
-              <div className="insight-kicker mb-2 flex items-center gap-1.5">
-                <span className="insight-kicker-mark">✦</span>
-                命理解读
-              </div>
-              <AiContent text={content} streaming={followUpLoading} />
-            </>
+            <AiContent text={content} streaming={followUpLoading} />
           )}
         </div>
 

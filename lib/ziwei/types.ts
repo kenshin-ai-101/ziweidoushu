@@ -4,6 +4,8 @@ export interface BirthInfo {
   day: number;       // Gregorian day
   hour: number;      // 时辰 branch index (0=子, 1=丑, ... 11=亥)
   gender: 'male' | 'female';
+  /** URL u=1 / 表单「时辰不详」时为 true，排盘按子时(0)起盘 */
+  unknownTime?: boolean;
   name?: string;
   province?: string;   // 出生省份
   city?: string;       // 出生城市
@@ -89,6 +91,10 @@ export interface ZiweiChart {
   daXians: DaXian[];
   currentAge: number;
   currentDaXianIndex: number;
+  /** iztro 命主（非命宫主星，空宫时亦独立计算） */
+  soulMaster?: string;
+  /** iztro 身主 */
+  bodyMaster?: string;
   /** 生产 chart 页 chartToken，用于 /api/analysis 校验 */
   _chartToken?: string;
 }

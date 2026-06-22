@@ -74,12 +74,9 @@ function getCurrentShichenBranch(): number {
 }
 
 function getSoulBodyMasters(chart: ZiweiChart) {
-  const ming = chart.palaces.find(p => p.isMingGong || p.branch === chart.mingGongBranch);
-  const shen = chart.palaces.find(p => p.isShenGong || p.branch === chart.shenGongBranch);
-  const firstMajor = (p?: Palace) => p?.stars.find(s => s.type === 'major')?.name;
   return {
-    soul: firstMajor(ming) ?? '文曲',
-    body: firstMajor(shen) ?? '天梁',
+    soul: chart.soulMaster ?? '文曲',
+    body: chart.bodyMaster ?? '天梁',
   };
 }
 
@@ -171,6 +168,9 @@ export default function ChartBoard({
     `${STEMS[0]}${BRANCHES[birthInfo.hour]}`,
   ];
   const masters = getSoulBodyMasters(chart);
+  const timeLabel = birthInfo.unknownTime
+    ? '时辰不详（按子时起盘）'
+    : (pillars[3] ?? `${BRANCHES[birthInfo.hour]}时`);
 
   return (
     <div className={`w-full select-none${isProduction ? ' chart-board--production' : ''}`}>
@@ -255,6 +255,8 @@ export default function ChartBoard({
               <div className="palace-center-grid">
                 <span>北京时间</span>
                 <strong>{birthInfo.year}.{String(birthInfo.month).padStart(2, '0')}.{String(birthInfo.day).padStart(2, '0')}</strong>
+                <span>出生时辰</span>
+                <strong>{timeLabel}</strong>
                 <span>农历时间</span>
                 <strong>
                   {STEMS[chart.lunarInfo.yearStem]}{BRANCHES[chart.lunarInfo.yearBranch]}年

@@ -77,7 +77,11 @@ export default function PalaceCell({
   const minorStars = stars.filter(s => s.type === 'minor');
   const isEmptyPalace = majorStars.length === 0;
   const shownStars = [...majorStars, ...luckyStars, ...shaStars, ...minorStars];
-  const emptyHint = luckyStars.length > 0 ? '空宫· 吉星拱照' : '空宫';
+  const borrowedHint = isEmptyPalace && palace.borrowedStars?.length
+    ? `借${palace.borrowedFromName?.replace(/宫$/, '') ?? '对'}·${palace.borrowedStars.join('')}`
+    : '';
+  const emptyHint = borrowedHint
+    || (luckyStars.length > 0 ? '空宫· 吉星拱照' : '空宫');
 
   const renderStar = (star: Star) => {
     const overlaySiHua = overlayStarSiHua?.[star.name];
