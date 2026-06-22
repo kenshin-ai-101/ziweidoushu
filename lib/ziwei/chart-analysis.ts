@@ -6,7 +6,7 @@ import {
   type TopicKey,
 } from './db-analysis';
 import { COMBO_REGISTRY } from '@/lib/seo/combo';
-import type { ComboTopicContent, ComboTopicKey } from '@/lib/seo/combo-data.generated';
+import type { ComboTopicKey } from '@/lib/seo/combo-data.generated';
 import {
   buildOverviewAnalysisText,
   buildTemporalSihuaAppendix,
@@ -23,10 +23,35 @@ import {
 import { lookupTopicStarOverview } from './topic-overview-knowledge';
 import type { Palace, Star } from './types';
 
-const TOPIC_TO_COMBO_TOPIC: Partial<Record<TopicKey, ComboTopicKey>> = {
+const TOPIC_TO_COMBO_TOPIC: Partial<Record<TopicKey, ComboTopicKey | 'mingGong'>> = {
   love: 'fuQi',
   career: 'guanLu',
   wealth: 'caiBo',
+  personality: 'mingGong',
+};
+
+const TOPIC_RISK_DOMAIN: Partial<Record<TopicKey, string>> = {
+  wealth: '财富运势',
+  career: '事业职业',
+  love: '感情婚姻',
+  personality: '性格命格',
+  health: '身体健康',
+  family: '兄弟合伙',
+  children: '子女缘分',
+  move: '迁移外出',
+  friends: '人际贵人',
+  home: '田宅家宅',
+  spirit: '福德精神',
+  parents: '父母长辈',
+};
+
+const SHA_HARD = ['擎羊', '陀罗', '火星', '铃星'] as const;
+
+const SHA_TRAIT: Record<string, string> = {
+  擎羊: '刑伤突变',
+  陀罗: '拖延阻滞',
+  火星: '突发刚烈',
+  铃星: '暗中急躁',
 };
 
 const PALACE_NOTE_KEY: Partial<Record<string, keyof typeof LUCKY_STAR_PALACE[string]>> = {
@@ -63,7 +88,7 @@ function findPalace(chart: ZiweiChart, branch: number) {
   return chart.palaces.find(p => p.branch === branch);
 }
 
-function palaceNoteLabel(name: string): string {
+function palaceShortName(name: string): string {
   if (name === '命宫') return '命宫';
   return name.replace(/宫$/, '');
 }
@@ -182,28 +207,35 @@ export function getTopicMainStar(chart: ZiweiChart, topic: TopicKey): string | n
   return getTopicMainStars(chart, topic)[0] ?? null;
 }
 
-function getComboContent(stars: string[], topic: TopicKey): ComboTopicContent | null {
-  const comboTopic = TOPIC_TO_COMBO_TOPIC[topic];
-  if (!comboTopic || stars.length !== 2) return null;
-  const combo = COMBO_REGISTRY.find(c =>
+function findDualCombo(stars: string[]) {
+  if (stars.length !== 2) return null;
+  return COMBO_REGISTRY.find(c =>
     c.stars.length === 2 &&
     c.stars.every(star => stars.includes(star)),
-  );
-  return combo?.topics[comboTopic] ?? null;
+  ) ?? null;
 }
 
-function formatComboAppend(content: ComboTopicContent): string {
-  const sections = [
-    ['一句话定调', content.dingdiao],
-    ['核心论断', content.lundian],
-    ['命盘依据', content.yiju],
-    ['经典出处', content.chuchu],
-  ] as const;
+function buildDualStarBlockForTopic(stars: string[], topic: TopicKey): string {
+  const combo = findDualCombo(stars);
+  const comboTopic = TOPIC_TO_COMBO_TOPIC[topic];
+  if (!combo || !comboTopic || stars.length !== 2) return '';
+  const content = combo.topics[comboTopic as ComboTopicKey] ?? combo.topics.mingGong;
+  if (!content) return '';
 
-  return sections
-    .filter(([, body]) => body.trim())
-    .map(([title, body]) => section(title, body))
-    .join('\n\n');
+  return [
+    '---',
+    '',
+    `## ✦ 双星同宫 · 「${combo.name}」（${combo.palace}）`,
+    '',
+    `*${combo.brief}*`,
+    '',
+    '> **重要**：双星同宫不是单星之和——本盘命主属于此 24 组特殊组合之一，请重点参考下方论断（优先于单星基础论断）。',
+    '',
+    section('一句话定调', content.dingdiao),
+    section('核心论断', content.lundian),
+    section('命盘依据', content.yiju),
+    section('经典出处', content.chuchu),
+  ].filter(Boolean).join('\n');
 }
 
 function buildCoreWithOverlays(
@@ -344,69 +376,183 @@ function collectNatalSihua(chart: ZiweiChart) {
   );
 }
 
-function buildTopicSihua(chart: ZiweiChart, palace: Palace | undefined, options?: OverviewAnalysisOptions) {
-  if (!palace) return '';
-  const topicShort = palace.name.replace(/宫$/, '');
-  const focusBranches = new Set(
+function sihuaIcon(siHua: NonNullable<Star['siHua']>) {
+  if (siHua === '禄') return '🟢';
+  if (siHua === '权') return '🔵';
+  if (siHua === '科') return '🟡';
+  return '🔴';
+}
+
+function sihuaRelation(hitPalace: Palace, topicPalace: Palace): string {
+  const hitShort = palaceShortName(hitPalace.name);
+  const topicShort = palaceShortName(topicPalace.name);
+  if (hitPalace.branch === topicPalace.branch) return `落${hitShort}`;
+  if (hitPalace.branch === (topicPalace.branch + 6) % 12) return `落${hitShort}·你${topicShort}的对宫`;
+  return `落${hitShort}·你${topicShort}的三合`;
+}
+
+function topicNetworkBranches(chart: ZiweiChart, palace: Palace): Set<number> {
+  return new Set(
     topicPalaceLinks(chart, palace)
       .map(item => item.palace?.branch)
       .filter((b): b is number => typeof b === 'number'),
   );
+}
+
+function topicSanFangShaCount(chart: ZiweiChart, palace: Palace): number {
+  const branches = topicNetworkBranches(chart, palace);
+  let count = 0;
+  for (const p of chart.palaces) {
+    if (!branches.has(p.branch)) continue;
+    count += p.stars.filter(s => s.type === 'sha').length;
+  }
+  return count;
+}
+
+function buildTopicSihuaEmptySummary(chart: ZiweiChart, palace: Palace): string {
+  const topicShort = palaceShortName(palace.name);
+  const parts = topicPalaceLinks(chart, palace).flatMap(item => {
+    const p = item.palace;
+    if (!p) return [];
+    const stars = formatPalaceShort(p);
+    const palaceShort = palaceShortName(p.name);
+    if (item.isSelf) return [`${palaceShort}（本宫：${stars}）`];
+    if (item.role.includes('对宫')) return [`${palaceShort}（对宫：${stars}）`];
+    return [`${palaceShort}（三合：${stars}）`];
+  });
+  return `你这盘${topicShort}三方四正坐：${parts.join('；')}——本命四化未落入此范围，此项吉凶看大限/流年引动这些宫位时是否带出四化。`;
+}
+
+function buildTopicYearSihuaAppendix(
+  chart: ZiweiChart,
+  topic: TopicKey,
+  focusBranches: Set<number>,
+  networkKeys: Set<string>,
+) {
+  if (topic !== 'personality' && topic !== 'health') return '';
   const lines: string[] = [];
+  for (const { palace, star } of collectNatalSihua(chart)) {
+    if (focusBranches.has(palace.branch)) continue;
+    const effect = SIHUA_EFFECT[star.name]?.[star.siHua!];
+    if (!effect || star.siHua === '权') continue;
+    const key = `${star.name}化${star.siHua}@${palace.branch}`;
+    if (networkKeys.has(key)) continue;
+    lines.push(`${sihuaIcon(star.siHua!)} **${star.name}化${star.siHua}**（落${palaceShortName(palace.name)}）→ ${effect}`);
+  }
+  if (lines.length === 0) return '';
+  return ['', '**年干四化·关键宫位影响**', '', ...lines].join('\n');
+}
+
+function buildTopicSihua(
+  chart: ZiweiChart,
+  topic: TopicKey,
+  palace: Palace | undefined,
+  options?: OverviewAnalysisOptions,
+): { body: string; title: string } {
+  if (!palace) {
+    return {
+      body: '本命四化在本主题三方四正网络内暂未形成显著引动，需结合大限、流年再看触发时机。',
+      title: '四化路径 · 你这盘',
+    };
+  }
+
+  const focusBranches = topicNetworkBranches(chart, palace);
+  const lines: string[] = [];
+  const networkKeys = new Set<string>();
+  let hasNetworkSihua = false;
 
   for (const { palace: hitPalace, star } of collectNatalSihua(chart)) {
     if (!focusBranches.has(hitPalace.branch)) continue;
+    hasNetworkSihua = true;
+    const relation = sihuaRelation(hitPalace, palace);
     const effect = SIHUA_EFFECT[star.name]?.[star.siHua!];
-    if (!effect) continue;
-    const icon = star.siHua === '禄' ? '🟢' : star.siHua === '权' ? '🔵' : star.siHua === '科' ? '🟡' : '🔴';
-    const hitShort = hitPalace.name.replace(/宫$/, '');
-    const relation = hitPalace.branch === palace.branch
-      ? `落${hitShort}`
-      : hitPalace.branch === (palace.branch + 6) % 12
-        ? `落${hitShort}·你${topicShort}的对宫`
-        : `落${hitShort}`;
-    lines.push(`${icon} **${star.name}化${star.siHua}**（${relation}）`, effect, '');
+    networkKeys.add(`${star.name}化${star.siHua}@${hitPalace.branch}`);
+    lines.push(`${sihuaIcon(star.siHua!)} **${star.name}化${star.siHua}**（${relation}）`);
+    if (effect) lines.push(`   ${effect}`);
+    lines.push('');
+  }
+
+  if (!hasNetworkSihua) {
+    lines.push(buildTopicSihuaEmptySummary(chart, palace), '');
   }
 
   for (const item of topicPalaceLinks(chart, palace)) {
     if (!item.palace) continue;
     for (const star of item.palace.stars) {
-      const key = `${star.name}在${palaceNoteLabel(item.palace.name)}`;
+      const key = `${star.name}在${palaceShortName(item.palace.name)}`;
       const note = SIHUA_PALACE_NOTES[key as keyof typeof SIHUA_PALACE_NOTES];
       if (note) lines.push(`◇ **${key}**：${note}`);
     }
   }
+
+  lines.push(buildTopicYearSihuaAppendix(chart, topic, focusBranches, networkKeys));
 
   const temporal = buildTemporalSihuaAppendix(chart, options);
   if (temporal) {
     lines.push('', temporal);
   }
 
-  return lines.join('\n').trim();
+  const body = lines.join('\n').trim();
+  return {
+    body: body || '本命四化在本主题三方四正网络内暂未形成显著引动，需结合大限、流年再看触发时机。',
+    title: hasNetworkSihua ? '四化路径分析 · 落到你这盘' : '四化路径 · 你这盘',
+  };
 }
 
-function buildRiskReminder(palace: Palace | undefined) {
-  const risks: string[] = [
+function isDimStar(star: Star): boolean {
+  return star.brightness === 'dim'
+    || ['陷', '不'].includes(star.brightnessLabel ?? '');
+}
+
+function buildTopicRiskReminder(
+  chart: ZiweiChart,
+  topic: TopicKey,
+  palace: Palace | undefined,
+  stars: string[],
+) {
+  const domain = TOPIC_RISK_DOMAIN[topic] ?? TOPIC_LABEL[topic] ?? '此主题';
+  const lines: string[] = [
     '> 紫微斗数讲究阴阳互见，下方为基于本盘特征的中性提醒，知所警惕方能转危为安。',
     '',
   ];
-  if (!palace) return risks.join('\n');
+  if (!palace) return lines.join('\n');
+
+  const selfMajors = palace.stars.filter(s => s.type === 'major');
+  for (const star of selfMajors) {
+    if (isDimStar(star)) {
+      lines.push(`◆ 本宫主星【${star.name}】落陷，能量不足，${domain}方面需主动加强投入，不能仅靠本能驱动。`);
+    }
+  }
+
+  for (const star of palace.stars.filter(s => SHA_HARD.includes(s.name as typeof SHA_HARD[number]))) {
+    const trait = SHA_TRAIT[star.name] ?? '阻力';
+    lines.push(`◆ 本宫见【${star.name}】（${trait}），${domain}略有阻力，需识破再决策。`);
+  }
+
+  const shaTotal = topicSanFangShaCount(chart, palace);
+  if (shaTotal >= 4) {
+    lines.push(`◆ 三方四正煞星累计 ${shaTotal} 颗，整体阻力偏大，${domain}进展宜慢宜稳，不可强求速成。`);
+  }
+
+  if (palaceHasEmptyMajors(palace)) {
+    lines.push(`◆ 本宫空宫，能量需借对宫论事，${domain}走势比一般人更易受外缘/对宫牵动，自主性较弱。`);
+  }
 
   const jiStars = palace.stars.filter(s => s.siHua === '忌').map(s => s.name);
-  const shaStars = palace.stars.filter(s => s.type === 'sha').map(s => s.name);
-  if (palaceHasEmptyMajors(palace)) {
-    risks.push('◆ 本宫空宫，判断不宜只看本宫，必须合参对宫与三方四正，外部环境对结果影响更大。');
-  }
   if (jiStars.length) {
-    risks.push(`◆ 本宫见${jiStars.join('、')}化忌，遇大限流年引动时，相关主题容易出现阻滞、反复或口舌压力。`);
+    lines.push(`◆ 本宫见${jiStars.join('、')}化忌，遇大限流年引动时，${domain}容易出现阻滞、反复或口舌压力。`);
   }
-  if (shaStars.length) {
-    risks.push(`◆ 本宫会${shaStars.join('、')}等煞曜，宜避免急躁决策，凡事留证据、留余地。`);
+
+  if (lines.length === 2) {
+    lines.push(`◆ 本宫未见明显重煞，${domain}风险多来自大限、流年触发；平时以稳守节奏、避免过度消耗为要。`);
   }
-  if (risks.length === 2) {
-    risks.push('◆ 本宫未见明显重煞，风险多来自大限、流年触发；平时以稳守节奏、避免过度消耗为要。');
+
+  const dualBlock = buildDualStarBlockForTopic(stars, topic);
+  if (dualBlock) {
+    lines.push('', dualBlock);
   }
-  return risks.join('\n');
+
+  return lines.join('\n');
 }
 
 function buildGenericBasis(topic: TopicKey, palace: Palace | undefined, stars: string[]) {
@@ -461,28 +607,20 @@ function buildEnrichedTopicText(
   const parsed = parseDbMarkers(baseText);
   const primaryStar = stars[0] ?? '';
 
-  const sihuaBody = buildTopicSihua(chart, palace, options);
+  const { body: sihuaBody, title: sihuaTitle } = buildTopicSihua(chart, topic, palace, options);
   const parts = [
     section(`${TOPIC_LABEL[topic]}总览`, buildTopicOverview(topic, palace, stars, parsed)),
     section('一句话定调', parsed.dingdiao || `${TOPIC_PALACE_NAME[topic]}以${stars.join('、') || '本宫'}为主要气象，须合参三方四正。`),
     section('核心论断', buildCoreWithOverlays(primaryStar, parsed, chart, palace) || parsed.lundian || baseText),
     section('命盘推演', buildTopicTuiyan(chart, topic, palace, stars)),
     section('三方四正联动', buildTopicSanFang(chart, palace)),
-    section(
-      '四化路径分析 · 落到你这盘',
-      sihuaBody || '本命四化在本主题三方四正网络内暂未形成显著引动，需结合大限、流年再看触发时机。',
-    ),
+    section(sihuaTitle, sihuaBody),
     section('命盘依据', parsed.yiju || buildGenericBasis(topic, palace, stars)),
     section('经典出处', parsed.chuchu || buildGenericSource(topic, stars)),
-    section('⚠️ 风险提醒', buildRiskReminder(palace)),
+    section('⚠️ 风险提醒', buildTopicRiskReminder(chart, topic, palace, stars)),
   ];
 
-  let text = parts.filter(Boolean).join('\n\n');
-  const combo = getComboContent(stars, topic);
-  if (combo) {
-    text += `\n\n---\n\n${formatComboAppend(combo)}`;
-  }
-  return text;
+  return parts.filter(Boolean).join('\n\n');
 }
 
 /** 按 topic 对应宫位主星取 STAR_DB 论断；overview 走生产全文组装 */
