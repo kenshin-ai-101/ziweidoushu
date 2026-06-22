@@ -55,8 +55,20 @@ export const LUCKY_STAR_PALACE: Record<string, Partial<Record<'ming' | 'qianYi' 
 export const SHEN_GONG_SAME: string =
   '你的身宫与命宫同宫——倪师明示「命身同宫者，先天格局即是后天追求」。意味着这一生命运主线高度集中：35 岁后不会出现“换条路再来一次”的转折，而是把命宫的格局继续放大、深化。这种命格的好处是方向坚定、不易迷茫；代价是缺少“中年转向”的弹性，前半生定下的路子一旦走偏，调整成本会比常人更大。';
 
-export const EMPTY_MING_BORROW_CLOSING = (oppositeName: string, stars: string) =>
-  `**命宫空宫借${oppositeName}** — 你命宫无主星，需借对宫${oppositeName}的${stars}论事。倪师特别讲过「命空者，不在静处见性，要在动处见命」——你这盘的特点是"自我"在外面找——靠跟人互动、跨界、出差、外部世界的反馈才能看清自己是谁。安静自处反而会迷失方向。`;
+export const EMPTY_MING_BORROW_CLOSING = (oppositeName: string, stars: string) => {
+  const palace = oppositeName.endsWith('宫') ? oppositeName : `${oppositeName}宫`;
+  return `**命宫空宫借${palace.replace(/宫$/, '')}** — 你命宫无主星，需借对宫${palace}的${stars}论事。倪师特别讲过「命空者，不在静处见性，要在动处见命」——你这盘的特点是"自我"在外面找——靠跟人互动、跨界、出差、外部世界的反馈才能看清自己是谁。安静自处反而会迷失方向。`;
+};
+
+/** 命格总览文末「倪师《天纪》· 星曜法则」 */
+export const OVERVIEW_STAR_RULES: Record<string, string> = {
+  紫微: '紫微为帝座皇帝星，能解厄制化（逢凶化吉），但须文武百官（左右昌曲魁钺）夹辅方显贵气。',
+  天机: '天机属乙木，主神经与四肢；思虑过多则伤肝，宜动不宜静。',
+  天钺: '天钺为玉堂贵人星、主科甲与贵人助力。',
+  天魁: '天魁为昼贵人、主男性长辈与师长提携。',
+  文昌: '文昌为科甲星、主文书；在命则压力转头痛失眠。',
+  文曲: '文曲为科甲星、主才艺口才；在命则呼吸道与喉部为弱项。',
+};
 
 export const SIHUA_PALACE_NOTES: Partial<Record<string, string>> = {
   '天钺在命宫': '终身贵人常伴，关键时刻夜间有女性长辈或女师相助',

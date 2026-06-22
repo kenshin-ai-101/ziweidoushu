@@ -1056,18 +1056,7 @@ export default function InsightPanel({
               <p className="insight-loading-text animate-pulse">命格解读生成中…</p>
             </div>
           )}
-          {content && activeTopic === 'overview' && !followUpLoading && !content.startsWith('正在生成') && (
-            <OverviewVisual
-              chart={chart}
-              text={content}
-              timeView={timeView}
-              liunianYear={liunianYear}
-              liuyueMonth={liuyueMonth}
-              liuriDay={liuriDay}
-              liushiHour={liushiHour}
-            />
-          )}
-          {content && activeTopic !== 'overview' && (
+          {content && (
             <AiContent text={content} streaming={followUpLoading} />
           )}
         </div>

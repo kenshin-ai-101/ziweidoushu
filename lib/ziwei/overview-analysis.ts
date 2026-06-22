@@ -7,6 +7,7 @@ import {
   EMPTY_MING_BORROW_CLOSING,
   LUCKY_STAR_PALACE,
   OVERVIEW_INTRO,
+  OVERVIEW_STAR_RULES,
   SECOND_MAJOR_DESC,
   SHEN_GONG_SAME,
   SIHUA_EFFECT,
@@ -213,42 +214,81 @@ function collectNatalSihua(chart: ZiweiChart) {
   );
 }
 
-function buildSihuaPath(chart: ZiweiChart, ming: Palace, opposite: Palace | undefined) {
+function palaceShortName(name: string): string {
+  if (name === '命宫') return '命宫';
+  return name.replace(/宫$/, '');
+}
+
+function mingNetworkBranches(ming: Palace): Set<number> {
+  return new Set([
+    ming.branch,
+    (ming.branch + 4) % 12,
+    (ming.branch + 8) % 12,
+    (ming.branch + 6) % 12,
+  ]);
+}
+
+function sihuaIcon(siHua: NonNullable<Star['siHua']>) {
+  if (siHua === '禄') return '🟢';
+  if (siHua === '权') return '🔵';
+  if (siHua === '科') return '🟡';
+  return '🔴';
+}
+
+function sihuaRelation(hitPalace: Palace, ming: Palace): string {
+  const hitShort = palaceShortName(hitPalace.name);
+  const mingShort = palaceShortName(ming.name);
+  if (hitPalace.branch === ming.branch) return `落${hitShort}`;
+  if (hitPalace.branch === (ming.branch + 6) % 12) return `落${hitShort}·你${mingShort}的对宫`;
+  return `落${hitShort}·你${mingShort}的三合`;
+}
+
+function buildSihuaEmptySummary(chart: ZiweiChart, ming: Palace): string {
+  const items = sanFangPalaces(chart, ming);
+  const parts = items.flatMap(item => {
+    const p = item.palace;
+    if (!p) return [];
+    const stars = formatStarList(p.stars, true);
+    const short = palaceShortName(p.name);
+    if (item.key === 'ming') return [`${short}（本宫：${stars}）`];
+    if (item.key === 'qianYi') return [`${short}（对宫：${stars}）`];
+    return [`${short}（三合：${stars}）`];
+  });
+  return `你这盘命宫三方四正坐：${parts.join('；')}——本命四化未落入此范围，此项吉凶看大限/流年引动这些宫位时是否带出四化。`;
+}
+
+function buildSihuaPath(chart: ZiweiChart, ming: Palace) {
+  const network = mingNetworkBranches(ming);
   const lines: string[] = [];
-  const hasEmpty = ming.isEmpty || !ming.stars.some(s => s.type === 'major');
-  const focusBranches = new Set([ming.branch, (ming.branch + 6) % 12]);
+  let hasNetworkSihua = false;
 
   for (const { palace, star } of collectNatalSihua(chart)) {
-    if (!focusBranches.has(palace.branch) && !['权', '禄'].includes(star.siHua ?? '')) continue;
+    if (!network.has(palace.branch)) continue;
+    hasNetworkSihua = true;
     const effect = SIHUA_EFFECT[star.name]?.[star.siHua!];
-    if (!effect) continue;
-    const where = palace.branch === ming.branch
-      ? '落命宫'
-      : palace.branch === (ming.branch + 6) % 12
-        ? `落${palace.name.replace(/宫$/, '')}·你命宫的对宫`
-        : `落${palace.name.replace(/宫$/, '')}`;
-    const icon = star.siHua === '禄' ? '🟢' : star.siHua === '权' ? '🔵' : star.siHua === '科' ? '🟡' : '🔴';
-    lines.push(`${icon} **${star.name}化${star.siHua}**（${where}）`, `   ${effect}`, '');
+    lines.push(`${sihuaIcon(star.siHua!)} **${star.name}化${star.siHua}**（${sihuaRelation(palace, ming)}）`);
+    if (effect) lines.push(`   ${effect}`);
+    lines.push('');
   }
 
-  if (lines.length === 0 && hasEmpty && opposite) {
-    const s = opposite.stars.find(st => st.siHua);
-    if (s) {
-      const effect = SIHUA_EFFECT[s.name]?.[s.siHua!] ?? `化${s.siHua}引动对宫能量。`;
-      lines.push(`🔵 **${s.name}化${s.siHua}**（落${opposite.name.replace(/宫$/, '')}·你命宫的对宫）`, `   ${effect}`, '');
-    }
+  if (!hasNetworkSihua) {
+    lines.push(buildSihuaEmptySummary(chart, ming));
   }
+
   return lines.join('\n').trim();
 }
 
-function buildYearSihuaKey(chart: ZiweiChart) {
+function buildYearSihuaKey(chart: ZiweiChart, ming: Palace, options?: OverviewAnalysisOptions) {
+  const network = mingNetworkBranches(ming);
   const lines: string[] = [];
+
   for (const { palace, star } of collectNatalSihua(chart)) {
+    if (network.has(palace.branch)) continue;
     const effect = SIHUA_EFFECT[star.name]?.[star.siHua!];
     if (!effect || star.siHua === '权') continue;
-    const icon = star.siHua === '禄' ? '🟢' : star.siHua === '科' ? '🟡' : '🔴';
-    lines.push(`${icon} **${star.name}化${star.siHua}**（落${palace.name.replace(/宫$/, '')}）→ ${effect}`);
+    lines.push(`${sihuaIcon(star.siHua!)} **${star.name}化${star.siHua}**（落${palaceShortName(palace.name)}）→ ${effect}`);
   }
+
   for (const [key, text] of Object.entries(SIHUA_PALACE_NOTES)) {
     const [starName, palaceShort] = key.split('在');
     const palace = chart.palaces.find(p => p.name.startsWith(palaceShort));
@@ -256,7 +296,13 @@ function buildYearSihuaKey(chart: ZiweiChart) {
       lines.push(`◇ **${key}**：${text}`);
     }
   }
-  return lines.join('\n');
+
+  const temporal = buildTemporalSihua(chart, options);
+  if (temporal) {
+    lines.push('', temporal);
+  }
+
+  return lines.join('\n').trim();
 }
 
 function buildRiskReminders(hasEmptyMing: boolean) {
@@ -266,6 +312,9 @@ function buildRiskReminders(hasEmptyMing: boolean) {
   ];
   if (hasEmptyMing) {
     lines.push('◆ 本宫空宫，能量需借对宫论事，命格总览走势比一般人更易受外缘/对宫牵动，自主性较弱。');
+  }
+  if (lines.length === 2) {
+    lines.push('◆ 本宫未见明显重煞，命格走势多来自大限、流年触发；平时以稳守节奏、避免过度消耗为要。');
   }
   return lines.join('\n');
 }
@@ -349,7 +398,6 @@ function buildAuxiliaryComboBlock(primaryStar: string, ming: Palace) {
   const auxStars = ming.stars
     .filter(s => s.type !== 'major')
     .map(s => s.name);
-  const comboAux = auxStars.filter(name => COMBO_STAR_DB[primaryStar]?.[name]);
   if (auxStars.length === 0) return '';
 
   const lines = [
@@ -361,12 +409,34 @@ function buildAuxiliaryComboBlock(primaryStar: string, ming: Palace) {
     '',
   ];
 
-  for (const aux of comboAux) {
-    const text = COMBO_STAR_DB[primaryStar]?.[aux];
-    if (!text) continue;
-    lines.push(`### ✦ 「${primaryStar}+${aux}」 — 吉星辅佐`, '', text, '');
+  for (const aux of auxStars) {
+    const comboText = COMBO_STAR_DB[primaryStar]?.[aux];
+    if (!comboText) continue;
+    const isSha = ['火星', '铃星', '擎羊', '陀罗', '地空', '地劫', '破碎'].includes(aux);
+    lines.push(
+      `### ${isSha ? '⚠' : '✦'} 「${primaryStar}+${aux}」 — ${isSha ? '煞星冲击' : '吉星辅佐'}`,
+      '',
+      comboText,
+      '',
+    );
   }
-  return lines.join('\n');
+  return lines.join('\n').trim();
+}
+
+function buildOverviewStarRulesFooter(chart: ZiweiChart, ming: Palace, mainStars: string[]): string {
+  const names = new Set<string>(mainStars);
+  for (const p of chart.palaces) {
+    if (!mingNetworkBranches(ming).has(p.branch)) continue;
+    for (const s of p.stars) names.add(s.name);
+  }
+  const rules = [...names].map(n => OVERVIEW_STAR_RULES[n]).filter(Boolean);
+  if (rules.length === 0) return '';
+  return [
+    '',
+    '【倪师《天纪》· 星曜法则】',
+    ...rules.map(r => `· ${r}`),
+    '· 煞星（羊陀火铃空劫）亮度庙旺时反可制化为助、未必主凶；落陷方显其凶。',
+  ].join('\n');
 }
 
 /** 生产 /api/analysis overview 全文组装 */
@@ -396,10 +466,8 @@ export function buildOverviewAnalysisText(chart: ZiweiChart, options?: OverviewA
     : `你的身宫落在${findPalace(chart, chart.shenGongBranch)?.name ?? '身宫'}，后天追求会转向该宫主管领域，需把命宫天赋落实到对应人生场景。`));
   parts.push(section('命盘推演', buildMingPanTuiyan(chart, ming, opposite, mainStars)));
   parts.push(section('三方四正联动', buildSanFang(chart, ming, mainStars, opposite)));
-  parts.push(section('四化路径分析 · 落到你这盘', buildSihuaPath(chart, ming, opposite)));
-  parts.push(section('年干四化·关键宫位影响', buildYearSihuaKey(chart)));
-  const temporalSihua = buildTemporalSihua(chart, options);
-  if (temporalSihua) parts.push(section('当前时间层四化', temporalSihua));
+  parts.push(section('四化路径分析 · 落到你这盘', buildSihuaPath(chart, ming)));
+  parts.push(section('年干四化·关键宫位影响', buildYearSihuaKey(chart, ming, options)));
   parts.push(section('命盘依据', parsed.yiju));
   parts.push(section('经典出处', parsed.chuchu));
   parts.push(section('⚠️ 风险提醒', buildRiskReminders(hasEmpty)));
@@ -408,11 +476,11 @@ export function buildOverviewAnalysisText(chart: ZiweiChart, options?: OverviewA
     mainStars.join('、'),
   )));
 
-  const dualBlock = buildDualStarBlock(mainStars);
-  if (dualBlock) parts.push(dualBlock);
+  const footer = [
+    buildDualStarBlock(mainStars),
+    buildAuxiliaryComboBlock(primaryStar, ming),
+    buildOverviewStarRulesFooter(chart, ming, mainStars),
+  ].filter(Boolean).join('\n\n');
 
-  const auxBlock = buildAuxiliaryComboBlock(primaryStar, ming);
-  if (auxBlock) parts.push(auxBlock);
-
-  return parts.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  return [parts.filter(Boolean).join('\n\n'), footer].filter(Boolean).join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
 }
