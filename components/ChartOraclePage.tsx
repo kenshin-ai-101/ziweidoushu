@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import BirthForm, { type BirthFormState } from '@/components/BirthForm';
 import ChartBoard from '@/components/ChartBoard';
 import ChartTopbar from '@/components/ChartTopbar';
+import WenmoSchoolDrawer from '@/components/WenmoSchoolDrawer';
 import ChartTimeDrill from '@/components/ChartTimeDrill';
 import InsightPanel from '@/components/InsightPanel';
 import ShareModal from '@/components/ShareModal';
 import FamousPersonCard from '@/components/FamousPersonCard';
 import PatternsLink from '@/components/PatternsLink';
 import { OracleChrome, OracleHero } from '@/components/OracleSubpage';
+import ChartMyHistory from '@/components/ChartMyHistory';
 import { useAuth } from '@/hooks/use-auth';
 import { formToSearchParams, searchParamsToForm, formToBirthInfo } from '@/lib/ziwei/share';
 import { useHistory } from '@/lib/ziwei/history';
@@ -41,7 +43,8 @@ function getCurrentShichenBranch(): number {
 
 export function ChartOraclePage() {
   const router = useRouter();
-  const { isPro } = useAuth();
+  const { isLoggedIn, loading: authLoading, isPro } = useAuth();
+  const { history, save: saveHistory, remove: removeHistory, clearAll: clearHistory } = useHistory();
   const [chart, setChart] = useState<ZiweiChart | null>(null);
   const [savedForm, setSavedForm] = useState<BirthFormState | null>(null);
   const [formKey, setFormKey] = useState(0);
@@ -49,6 +52,7 @@ export function ChartOraclePage() {
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState('');
   const [wenmoConfig, setWenmoConfig] = useState<WenmoConfig>(DEFAULT_WENMO_CONFIG);
+  const [schoolOpen, setSchoolOpen] = useState(false);
   const latestFormRef = useRef<BirthFormState | null>(null);
 
   const [selectedPalace, setSelectedPalace] = useState<Palace | null>(null);
@@ -60,8 +64,6 @@ export function ChartOraclePage() {
   const [liuyueMonth, setLiuyueMonth] = useState(new Date().getMonth() + 1);
   const [liuriDay, setLiuriDay] = useState(new Date().getDate());
   const [liushiHour, setLiushiHour] = useState(getCurrentShichenBranch);
-
-  const { save: saveHistory, syncCloud } = useHistory();
 
   const buildChartUrl = useCallback((form: BirthFormState, config: WenmoConfig) => {
     const params = formToSearchParams(form);
@@ -97,7 +99,6 @@ export function ChartOraclePage() {
       setLiushiHour(getCurrentShichenBranch());
       if (sourceForm) {
         saveHistory(sourceForm);
-        syncCloud(sourceForm);
         if (typeof window !== 'undefined') {
           window.history.replaceState({}, '', buildChartUrl(sourceForm, config));
         }
@@ -110,7 +111,7 @@ export function ChartOraclePage() {
     } finally {
       setGenerating(false);
     }
-  }, [buildChartUrl, saveHistory, syncCloud]);
+  }, [buildChartUrl, saveHistory]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -136,8 +137,6 @@ export function ChartOraclePage() {
     latestFormRef.current = form;
     setSavedForm(form);
     if (form.year && form.month && form.day) {
-      saveHistory(form);
-      syncCloud(form);
       const params = formToSearchParams(form);
       if (typeof window !== 'undefined') {
         for (const [key, value] of Object.entries(wenmoConfigToSearchParams(wenmoConfig))) {
@@ -157,13 +156,6 @@ export function ChartOraclePage() {
     saveStoredWenmoConfig(config);
     if (typeof window !== 'undefined' && savedForm) {
       window.history.replaceState({}, '', buildChartUrl(savedForm, config));
-    }
-  };
-
-  const handleSchoolConfigApply = (config: WenmoConfig) => {
-    handleSchoolConfigChange(config);
-    if (savedForm) {
-      void loadChart(formToBirthInfo(savedForm), savedForm, config);
     }
   };
 
@@ -235,9 +227,18 @@ export function ChartOraclePage() {
           onHourChange={setLiushiHour}
           onBack={handleReset}
           onShare={savedForm ? () => setShareModalOpen(true) : undefined}
-          schoolConfig={wenmoConfig}
-          onSchoolConfigChange={handleSchoolConfigChange}
-          onSchoolConfigApply={handleSchoolConfigApply}
+          onOpenSchool={() => setSchoolOpen(true)}
+        />
+
+        <WenmoSchoolDrawer
+          open={schoolOpen}
+          onClose={() => setSchoolOpen(false)}
+          onChange={config => {
+            handleSchoolConfigChange(config);
+            if (savedForm) {
+              void loadChart(formToBirthInfo(savedForm), savedForm, config);
+            }
+          }}
         />
 
         <div className="chart-workspace" data-testid="chart-workspace">
@@ -385,10 +386,20 @@ export function ChartOraclePage() {
           </div>
         </div>
 
-        <div className="oracle-form-note">
-          <p>登录后自动保存命盘 · 换设备也能看记录</p>
-          <span>未登录时排盘不会保存，刷新即失</span>
-        </div>
+        {isLoggedIn && !authLoading && (
+          <ChartMyHistory
+            history={history}
+            remove={removeHistory}
+            clearAll={clearHistory}
+          />
+        )}
+
+        {!isLoggedIn && !authLoading && (
+          <div className="oracle-form-note">
+            <p>登录后自动保存命盘 · 换设备也能看记录</p>
+            <span>未登录时排盘不会保存，刷新即失</span>
+          </div>
+        )}
       </section>
     </OracleChrome>
   );
