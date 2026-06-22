@@ -765,6 +765,17 @@ body:has(.chart-page-root) {
   line-height: 1.16;
   letter-spacing: -0.022em;
 }
+.overview-subtitle {
+  margin: 0 0 4px;
+  color: var(--tx-2);
+  font-size: 14px;
+  line-height: 1.65;
+}
+.overview-visual + .space-y-1 {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--bdr);
+}
 .overview-radar-wrap {
   position: relative;
   width: min(420px, 100%);
@@ -2002,6 +2013,15 @@ body:has(.chart-page-root) {
   .chart-topbar-export { display: none !important; }
   .chart-topbar-tools .chart-topbar-toolbtn:not(.chart-topbar-export) {
     display: none;
+  }
+  .overview-cards {
+    grid-template-columns: 1fr;
+  }
+  .overview-title {
+    font-size: 22px;
+  }
+  .overview-radar-wrap {
+    width: 100%;
   }
 
   .insight-topic-seg--wrap {

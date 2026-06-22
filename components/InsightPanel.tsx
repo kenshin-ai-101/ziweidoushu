@@ -22,6 +22,15 @@ import {
   type TopicKey,
 } from '@/lib/ziwei/db-analysis';
 import ChatPanel, { type ChatPanelHandle } from '@/components/ChatPanel';
+import {
+  OVERVIEW_AXIS_PALACES,
+  axisPalaceLabel,
+  getOverviewKicker,
+  getOverviewVisualCards,
+  getOverviewVisualHeadline,
+  getOverviewVisualSubtitle,
+  palaceScoreForOverview,
+} from '@/lib/ziwei/overview-visual';
 
 interface SelectedSiHua {
   starName: string;
@@ -410,34 +419,16 @@ function OverviewDetail({
   );
 }
 
-function OverviewVisual({
-  chart,
-  text,
-  timeView,
-  liunianYear,
-  liuyueMonth,
-  liuriDay,
-  liushiHour,
-}: {
-  chart: ZiweiChart;
-  text: string;
-  timeView: TimeView;
-  liunianYear: number;
-  liuyueMonth: number;
-  liuriDay: number;
-  liushiHour: number;
-}) {
+function OverviewVisualSummary({ chart }: { chart: ZiweiChart }) {
   const center = 130;
   const radii = [34, 55, 76, 96];
-  const axisPalace: Record<string, string> = {
-    career: '官禄',
-    wealth: '财帛',
-    love: '夫妻',
-    personality: '命宫',
-    health: '疾厄',
-    overall: '迁移',
-  };
-  const values = OVERVIEW_AXES.map(axis => palaceScore(findPalace(chart, axisPalace[axis.key])));
+  const kicker = getOverviewKicker(chart);
+  const headline = getOverviewVisualHeadline(chart);
+  const subtitle = getOverviewVisualSubtitle(chart);
+  const cards = getOverviewVisualCards(chart);
+  const values = OVERVIEW_AXES.map(axis =>
+    palaceScoreForOverview(findPalace(chart, OVERVIEW_AXIS_PALACES[axis.key])),
+  );
   const points = OVERVIEW_AXES.map((_, i) => {
     const angle = -Math.PI / 2 + i * (Math.PI * 2 / OVERVIEW_AXES.length);
     const r = values[i] / 100 * 96;
@@ -451,21 +442,21 @@ function OverviewVisual({
   return (
     <div className="overview-visual">
       <div className="overview-kicker">
-        命宫主星 · {palaceMajorText(chart, '命宫')}（智星）
-        <span>机月同梁</span>
-        <span>命宫空宫 · 借星论</span>
+        {kicker.lead}
+        {kicker.tags.map(tag => <span key={tag}>{tag}</span>)}
       </div>
-      <h2 className="overview-title">{getOverviewHeadline(chart)}</h2>
+      <h2 className="overview-title">{headline}</h2>
+      {subtitle && <p className="overview-subtitle">{subtitle}</p>}
       <div className="overview-radar-wrap">
         <svg className="overview-radar" viewBox="0 0 260 260" aria-hidden="true">
           {grid.map((pts, i) => (
             <polygon key={i} points={pts} fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth="1" />
           ))}
-          {OVERVIEW_AXES.map((_, i) => {
+          {OVERVIEW_AXES.map((axis, i) => {
             const angle = -Math.PI / 2 + i * (Math.PI * 2 / OVERVIEW_AXES.length);
             return (
               <line
-                key={_.key}
+                key={axis.key}
                 x1={center}
                 y1={center}
                 x2={center + Math.cos(angle) * 108}
@@ -484,7 +475,7 @@ function OverviewVisual({
           return (
             <div key={axis.key} className="overview-axis-label" style={{ left: `${x / 260 * 100}%`, top: `${y / 260 * 100}%` }}>
               <strong>{axis.label}</strong>
-              <span>{palaceMajorText(chart, axisPalace[axis.key])}</span>
+              <span>{axisPalaceLabel(chart, OVERVIEW_AXIS_PALACES[axis.key])}</span>
             </div>
           );
         })}
@@ -494,28 +485,19 @@ function OverviewVisual({
         <div>
           <span>优</span>
           <strong>核心优势</strong>
-          <p>策划应变一流，能于乱中看见先机，是天生的军师。</p>
+          <p>{cards.advantage}</p>
         </div>
         <div>
           <span>合</span>
           <strong>关系模式</strong>
-          <p>重沟通、喜知心，遇善解人意者方能交心。</p>
+          <p>{cards.relationship}</p>
         </div>
         <div>
           <span>课</span>
           <strong>成长课题</strong>
-          <p>思虑过动易摇摆，定守一处、做深一件，方能成器。</p>
+          <p>{cards.growth}</p>
         </div>
       </div>
-      <OverviewDetail
-        chart={chart}
-        text={text}
-        timeView={timeView}
-        liunianYear={liunianYear}
-        liuyueMonth={liuyueMonth}
-        liuriDay={liuriDay}
-        liushiHour={liushiHour}
-      />
     </div>
   );
 }
@@ -1055,6 +1037,9 @@ export default function InsightPanel({
               <div className="text-4xl mb-3" style={{ color: 'var(--t-gold)', opacity: 0.1 }}>✦</div>
               <p className="insight-loading-text animate-pulse">命格解读生成中…</p>
             </div>
+          )}
+          {content && activeTopic === 'overview' && !content.startsWith('正在生成') && (
+            <OverviewVisualSummary chart={chart} />
           )}
           {content && (
             <AiContent text={content} streaming={followUpLoading} />
