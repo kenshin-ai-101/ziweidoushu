@@ -1,6 +1,7 @@
 import { BRANCHES, STEMS } from './constants';
 import { COMBO_STAR_DB, getAnalysisText } from './db-analysis';
 import { COMBO_REGISTRY } from '@/lib/seo/combo';
+import { buildTimeOverlay, getTemporalGanzhiInfo, getTimeOverlayLabel, type TimeViewKey } from './sihua';
 import type { Palace, Star, ZiweiChart } from './types';
 import {
   EMPTY_MING_BORROW_CLOSING,
@@ -19,6 +20,14 @@ interface ParsedDb {
   lundian: string;
   yiju: string;
   chuchu: string;
+}
+
+export interface OverviewAnalysisOptions {
+  view?: TimeViewKey;
+  liunianYear?: number;
+  liuyueMonth?: number;
+  liuriDay?: number;
+  liushiHour?: number;
 }
 
 function parseDbMarkers(text: string): ParsedDb {
@@ -261,6 +270,56 @@ function buildRiskReminders(hasEmptyMing: boolean) {
   return lines.join('\n');
 }
 
+function timeViewTitle(view: TimeViewKey) {
+  if (view === 'daxian') return '大限';
+  if (view === 'liunian') return '流年';
+  if (view === 'liuyue') return '流月';
+  if (view === 'liuri') return '流日';
+  if (view === 'liushi') return '流时';
+  return getTimeOverlayLabel(view) ?? '本命';
+}
+
+function buildTemporalSihua(chart: ZiweiChart, options?: OverviewAnalysisOptions) {
+  const view = options?.view ?? 'mingpan';
+  if (view === 'mingpan') return '';
+
+  const now = new Date();
+  const liunianYear = options?.liunianYear ?? now.getFullYear();
+  const liuyueMonth = options?.liuyueMonth ?? now.getMonth() + 1;
+  const liuriDay = options?.liuriDay ?? now.getDate();
+  const liushiHour = options?.liushiHour ?? 0;
+  const temporal = getTemporalGanzhiInfo(liunianYear, liuyueMonth, liuriDay, liushiHour);
+  const overlay = buildTimeOverlay({ view, chart, liunianYear, liuyueMonth, liuriDay, liushiHour });
+  const entries = (['禄', '权', '科', '忌'] as const)
+    .map(siHua => {
+      const starName = Object.keys(overlay).find(name => overlay[name] === siHua);
+      return starName ? `· ${starName}化${siHua}` : '';
+    })
+    .filter(Boolean);
+  if (entries.length === 0) return '';
+
+  const dateLine = [
+    `${STEMS[temporal.yearStem]}${BRANCHES[temporal.yearBranch]}年`,
+    view === 'liuyue' || view === 'liuri' || view === 'liushi'
+      ? `${STEMS[temporal.monthStem]}${BRANCHES[temporal.monthBranch]}月`
+      : '',
+    view === 'liuri' || view === 'liushi'
+      ? `${STEMS[temporal.dayStem]}${BRANCHES[temporal.dayBranch]}日`
+      : '',
+    view === 'liushi'
+      ? `${STEMS[temporal.hourStem]}${BRANCHES[temporal.hourBranch]}时`
+      : '',
+  ].filter(Boolean).join(' · ');
+
+  return [
+    `当前层级：**${timeViewTitle(view)}**（${dateLine}）`,
+    '',
+    ...entries,
+    '',
+    '本命四化是底盘，时间层四化是引动；判断时以本命格局为体，以当前层级四化为应期与触发点。',
+  ].join('\n');
+}
+
 function buildDualStarBlock(starNames: string[]) {
   const combo = findDualCombo(starNames);
   if (!combo?.topics.mingGong) return '';
@@ -306,7 +365,7 @@ function buildAuxiliaryComboBlock(primaryStar: string, ming: Palace) {
 }
 
 /** 生产 /api/analysis overview 全文组装 */
-export function buildOverviewAnalysisText(chart: ZiweiChart): string {
+export function buildOverviewAnalysisText(chart: ZiweiChart, options?: OverviewAnalysisOptions): string {
   const gender = chart.birthInfo.gender;
   const ming = mingPalace(chart);
   if (!ming) return '未能识别命宫，请重新起盘后再试。';
@@ -334,6 +393,8 @@ export function buildOverviewAnalysisText(chart: ZiweiChart): string {
   parts.push(section('三方四正联动', buildSanFang(chart, ming, mainStars, opposite)));
   parts.push(section('四化路径分析 · 落到你这盘', buildSihuaPath(chart, ming, opposite)));
   parts.push(section('年干四化·关键宫位影响', buildYearSihuaKey(chart)));
+  const temporalSihua = buildTemporalSihua(chart, options);
+  if (temporalSihua) parts.push(section('当前时间层四化', temporalSihua));
   parts.push(section('命盘依据', parsed.yiju));
   parts.push(section('经典出处', parsed.chuchu));
   parts.push(section('⚠️ 风险提醒', buildRiskReminders(hasEmpty)));

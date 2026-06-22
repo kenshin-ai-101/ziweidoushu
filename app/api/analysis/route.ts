@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
     const chart = body.chart as ZiweiChart | undefined;
     const chartToken = body.chartToken as string | undefined;
     const topic = body.topic as TopicKey | undefined;
+    const options = body.options;
 
     if (!chart?.birthInfo || !topic || !VALID_TOPICS.has(topic)) {
       return NextResponse.json({ error: '参数无效' }, { status: 400 });
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '会话已过期，请回到首页重新填写生辰起盘。' }, { status: 401 });
     }
 
-    const text = buildChartAnalysisText(chart, topic);
+    const text = buildChartAnalysisText(chart, topic, options);
     return NextResponse.json({ text });
   } catch (err) {
     console.error('[/api/analysis]', err);

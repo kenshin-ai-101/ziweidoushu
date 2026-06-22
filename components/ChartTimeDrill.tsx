@@ -62,7 +62,7 @@ function DrillSection({
   hint: string;
   tone?: 'default' | 'purple';
   first?: boolean;
-  scrollRef?: React.RefObject<HTMLDivElement | null>;
+  scrollRef?: React.Ref<HTMLDivElement>;
   children: React.ReactNode;
 }) {
   return (

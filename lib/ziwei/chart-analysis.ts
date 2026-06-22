@@ -3,7 +3,7 @@ import {
   getAnalysisText,
   type TopicKey,
 } from './db-analysis';
-import { buildOverviewAnalysisText } from './overview-analysis';
+import { buildOverviewAnalysisText, type OverviewAnalysisOptions } from './overview-analysis';
 
 /** 命宫主星（空宫则取借星） */
 export function getMingGongMainStars(chart: ZiweiChart): string[] {
@@ -22,9 +22,10 @@ export function getMingGongMainStar(chart: ZiweiChart): string | null {
 export function buildChartAnalysisText(
   chart: ZiweiChart,
   topic: TopicKey,
+  options?: OverviewAnalysisOptions,
 ): string {
   if (topic === 'overview') {
-    return buildOverviewAnalysisText(chart);
+    return buildOverviewAnalysisText(chart, options);
   }
   const star = getMingGongMainStar(chart);
   if (!star) {
@@ -39,10 +40,11 @@ export function buildChartAnalysisText(
 export function buildAllTopicAnalysisTabs(
   chart: ZiweiChart,
   topics: TopicKey[],
+  options?: OverviewAnalysisOptions,
 ): Record<string, string> {
   const tabs: Record<string, string> = {};
   for (const topic of topics) {
-    tabs[topic] = buildChartAnalysisText(chart, topic);
+    tabs[topic] = buildChartAnalysisText(chart, topic, options);
   }
   return tabs;
 }
