@@ -5,6 +5,7 @@ import type { ZiweiChart } from '@/lib/ziwei/types';
 import type { TimeView } from './TimeNav';
 import { BRANCHES, STEMS } from '@/lib/ziwei/constants';
 import { getTemporalGanzhiInfo } from '@/lib/ziwei/sihua';
+import { yearsForDaXian } from '@/lib/ziwei/chart-view';
 
 const LUNAR_MONTHS = ['正月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '冬月', '腊月'];
 const LUNAR_DAYS = [
@@ -16,12 +17,14 @@ const SHICHEN = ['子时', '丑时', '寅时', '卯时', '辰时', '巳时', '�
 
 interface ChartTimeDrillProps {
   chart: ZiweiChart;
+  daXianIndex: number;
   view: TimeView;
   liunianYear: number;
   liuyueMonth: number;
   liuriDay: number;
   liushiHour: number;
   onViewChange: (view: TimeView) => void;
+  onDaXianIndexChange: (index: number) => void;
   onYearChange: (year: number) => void;
   onMonthChange: (month: number) => void;
   onDayChange: (day: number) => void;
@@ -38,16 +41,6 @@ function daxianGanzhi(chart: ZiweiChart, dx: ZiweiChart['daXians'][number]) {
     ?? (dx.stemIndex != null ? STEMS[dx.stemIndex] : undefined)
     ?? (palace ? STEMS[palace.stem] : '');
   return `${stem}${BRANCHES[dx.palaceBranch]}`;
-}
-
-function liunianYearsForDaxian(chart: ZiweiChart) {
-  const dx = chart.daXians[chart.currentDaXianIndex];
-  if (!dx) return [];
-  const years: number[] = [];
-  for (let age = dx.startAge; age <= dx.endAge; age++) {
-    years.push(chart.birthInfo.year + age - 1);
-  }
-  return years;
 }
 
 function DrillSection({
@@ -115,18 +108,20 @@ function DrillCard({
 
 export default function ChartTimeDrill({
   chart,
+  daXianIndex,
   view,
   liunianYear,
   liuyueMonth,
   liuriDay,
   liushiHour,
   onViewChange,
+  onDaXianIndexChange,
   onYearChange,
   onMonthChange,
   onDayChange,
   onHourChange,
 }: ChartTimeDrillProps) {
-  const yearOptions = liunianYearsForDaxian(chart);
+  const yearOptions = yearsForDaXian(chart, daXianIndex);
   const currentYear = new Date().getFullYear();
   const daxianScrollRef = useRef<HTMLDivElement>(null);
   const liunianScrollRef = useRef<HTMLDivElement>(null);
@@ -142,7 +137,7 @@ export default function ChartTimeDrill({
     };
     scrollActiveIntoView(daxianScrollRef.current);
     scrollActiveIntoView(liunianScrollRef.current);
-  }, [chart.currentDaXianIndex, highlightLiunianYear]);
+  }, [daXianIndex, highlightLiunianYear]);
 
   return (
     <div className="chart-time-drill">
@@ -150,9 +145,12 @@ export default function ChartTimeDrill({
         {chart.daXians.map((dx, i) => (
           <DrillCard
             key={`${dx.startAge}-${dx.palaceBranch}`}
-            active={i === chart.currentDaXianIndex}
+            active={i === daXianIndex}
             ariaLabel={`大限 ${dx.startAge}~${dx.endAge}岁 ${daxianGanzhi(chart, dx)} ${dx.palaceName}`}
-            onClick={() => onViewChange('daxian')}
+            onClick={() => {
+              onDaXianIndexChange(i);
+              onViewChange('daxian');
+            }}
           >
             <div className="chart-time-card-age">{dx.startAge}~{dx.endAge}岁</div>
             <div className="chart-time-card-ganzhi">{daxianGanzhi(chart, dx)}</div>

@@ -713,7 +713,11 @@ export default function InsightPanel({
   const chatPanelRef = useRef<ChatPanelHandle>(null);
   const lastFocusKey = useRef('');
   const skipTopicEffect = useRef(false);
+  const chartRef = useRef(chart);
+  chartRef.current = chart;
+  const focusAbortRef = useRef<AbortController | null>(null);
   const chartToken = getChartToken(chart);
+  const selectedPalaceBranch = selectedPalace?.branch;
 
   const analysisOptions = {
     view: timeView,
@@ -732,7 +736,7 @@ export default function InsightPanel({
     }
     setContent('正在生成…');
     try {
-      const text = await fetchAnalysis(chart, topic, analysisOptions);
+      const text = await fetchAnalysis(chartRef.current, topic, analysisOptions);
       if (activeTopicRef.current !== topic) return;
       setTabCache(prev => ({ ...prev, [cacheKey]: text }));
       setContent(text);
@@ -740,8 +744,10 @@ export default function InsightPanel({
       if (activeTopicRef.current !== topic) return;
       setContent(err instanceof Error ? err.message : '分析获取失败，请稍后重试');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chart, chartToken, timeView, liunianYear, liuyueMonth, liuriDay, liushiHour]);
+  }, [chartToken, timeView, liunianYear, liuyueMonth, liuriDay, liushiHour]);
+
+  const loadTopicRef = useRef(loadTopic);
+  loadTopicRef.current = loadTopic;
 
   useEffect(() => {
     if (!chartToken) return;
@@ -752,7 +758,7 @@ export default function InsightPanel({
         const res = await fetch('/api/lookup-tabs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chart, chartToken }),
+          body: JSON.stringify({ chart: chartRef.current, chartToken }),
         });
         if (cancelled || !res.ok) return;
         const data = await res.json();
@@ -765,7 +771,13 @@ export default function InsightPanel({
           );
           setTabCache(prev => ({ ...seededTabs, ...prev }));
           const current = activeTopicRef.current;
-          if (data.tabs[current] && analysisOptions.view === 'mingpan') setContent(data.tabs[current]);
+          if (
+            data.tabs[current]
+            && analysisOptions.view === 'mingpan'
+            && !lastFocusKey.current
+          ) {
+            setContent(data.tabs[current]);
+          }
         }
       } catch { /* fallback */ }
     }, 400);
@@ -774,13 +786,17 @@ export default function InsightPanel({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [chart, chartToken, timeView, liunianYear, liuyueMonth, liuriDay, liushiHour]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chartToken, timeView, liunianYear, liuyueMonth, liuriDay, liushiHour]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (!chartToken) return;
+    focusAbortRef.current?.abort();
+    focusAbortRef.current = null;
+    lastFocusKey.current = '';
     activeTopicRef.current = 'overview';
     setActiveTopic('overview');
-    void loadTopic('overview');
-  }, [chart, chartToken]); // eslint-disable-line react-hooks/exhaustive-deps
+    void loadTopicRef.current('overview');
+  }, [chartToken]);
 
   useEffect(() => {
     if (skipTopicEffect.current) {
@@ -791,12 +807,12 @@ export default function InsightPanel({
     void loadTopic(activeTopic);
   }, [activeTopic, loadTopic]);
 
-  const streamFollowUp = async (prompt: string) => {
+  const streamFollowUp = async (prompt: string, signal?: AbortSignal) => {
     setFollowUpLoading(true);
     const prefixRef = { value: '' };
     setContent(prev => {
       prefixRef.value = prev && !prev.startsWith('正在生成') ? `${prev}\n\n---\n\n` : '';
-      return prefixRef.value;
+      return prefixRef.value || '正在生成…';
     });
 
     const cacheKey = buildFocusCacheKey(chartToken, prompt);
@@ -804,64 +820,82 @@ export default function InsightPanel({
 
     try {
       const result = await requestInterpret({
-        chart,
+        chart: chartRef.current,
         messages: [{ role: 'user', content: prompt }],
         cacheKey,
+        signal,
       });
 
+      if (signal?.aborted) return;
+
       if (!result.ok) {
-        setContent(`${prefixRef.value}${result.error}`);
+        if (!signal?.aborted) setContent(`${prefixRef.value}${result.error}`);
         return;
       }
 
       if (result.cached) {
-        setContent(`${prefixRef.value}${result.text}`);
+        if (!signal?.aborted) setContent(`${prefixRef.value}${result.text}`);
         return;
       }
 
       assistantText = await readInterpretStream(result.reader, text => {
-        setContent(`${prefixRef.value}${text}`);
+        if (!signal?.aborted) setContent(`${prefixRef.value}${text}`);
       });
-      if (assistantText) writeInterpretCache(cacheKey, assistantText);
+      if (assistantText && !signal?.aborted) writeInterpretCache(cacheKey, assistantText);
     } catch {
-      setContent(`${prefixRef.value}解读失败，请稍后重试。`);
+      if (!signal?.aborted) setContent(`${prefixRef.value}解读失败，请稍后重试。`);
     } finally {
-      setFollowUpLoading(false);
+      if (!signal?.aborted) setFollowUpLoading(false);
     }
   };
 
   useEffect(() => {
-    if (selectedPalace) {
-      const key = `palace-${selectedPalace.branch}`;
+    if (selectedPalaceBranch == null && !selectedSiHua) return;
+
+    if (selectedPalaceBranch != null) {
+      const key = `palace-${selectedPalaceBranch}`;
       if (key === lastFocusKey.current) return;
+
+      const palace = chartRef.current.palaces.find(p => p.branch === selectedPalaceBranch);
+      if (!palace) return;
+
+      focusAbortRef.current?.abort();
+      const controller = new AbortController();
+      focusAbortRef.current = controller;
       lastFocusKey.current = key;
 
-      const majors = selectedPalace.stars.filter(s => s.type === 'major');
+      const majors = palace.stars.filter(s => s.type === 'major');
       const starDesc = majors.length > 0
         ? majors.map(s => `${s.name}${s.siHua ? `化${s.siHua}` : ''}`).join('、')
         : '空宫（借对宫）';
-      const role = PALACE_ROLES[selectedPalace.name] ?? '';
-      const topic = PALACE_TO_TOPIC[selectedPalace.name] ?? 'overview';
+      const role = PALACE_ROLES[palace.name] ?? '';
+      const topic = PALACE_TO_TOPIC[palace.name] ?? 'overview';
 
       skipTopicEffect.current = true;
       activeTopicRef.current = topic;
       setActiveTopic(topic);
       setPanelMode('analysis');
 
-      const prompt = `请重点分析【${selectedPalace.name}】（主管：${role}），主星：${starDesc}，按结构输出：
+      const prompt = `请重点分析【${palace.name}】（主管：${role}），主星：${starDesc}，按结构输出：
 **【一句话结论】** **【核心判断】** **【命盘依据】** **【风险提醒】** **【行动建议】**`;
 
       setContent('正在生成…');
-      void streamFollowUp(prompt);
-      return;
+      void streamFollowUp(prompt, controller.signal);
+      return () => controller.abort();
     }
 
     if (selectedSiHua) {
       const key = `sihua-${selectedSiHua.starName}-${selectedSiHua.siHua}-${selectedSiHua.view}`;
       if (key === lastFocusKey.current) return;
+
+      focusAbortRef.current?.abort();
+      const controller = new AbortController();
+      focusAbortRef.current = controller;
       lastFocusKey.current = key;
 
-      const palaceOfStar = chart.palaces.find(p => p.stars.some(s => s.name === selectedSiHua.starName));
+      const palaceOfStar = chartRef.current.palaces.find(
+        p => p.stars.some(s => s.name === selectedSiHua.starName),
+      );
       const palaceName = palaceOfStar?.name ?? '';
       const viewLabel =
         selectedSiHua.view === 'daxian' ? '大限'
@@ -876,9 +910,10 @@ export default function InsightPanel({
 **【一句话结论】** **【核心判断】** **【命盘依据】** **【风险提醒】** **【行动建议】**`;
 
       setContent('正在生成…');
-      void streamFollowUp(prompt);
+      void streamFollowUp(prompt, controller.signal);
+      return () => controller.abort();
     }
-  }, [selectedPalace, selectedSiHua, chart]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedPalaceBranch, selectedSiHua, chartToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTopicClick = async (topic: TopicKey) => {
     lastFocusKey.current = '';

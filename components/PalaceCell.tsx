@@ -1,6 +1,7 @@
 'use client';
 import { motion } from 'framer-motion';
 import type { Palace, Star } from '@/lib/ziwei/types';
+import { palaceShortName } from '@/lib/ziwei/chart-view';
 import { STEMS, BRANCHES } from '@/lib/ziwei/constants';
 import clsx from 'clsx';
 
@@ -17,13 +18,15 @@ interface PalaceCellProps {
   overlayLabel?: string;
   /** 点击叠加四化 badge 回调 */
   onSiHuaClick?: (starName: string, siHua: string) => void;
+  /** production 命盘页禁用入场动画，避免父级重渲染时闪烁 */
+  disableEntranceAnimation?: boolean;
 }
 
-const SIHUA_STYLES: Record<string, string> = {
-  '禄': 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
-  '权': 'text-blue-400 bg-blue-500/10 border-blue-500/30',
-  '科': 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
-  '忌': 'text-red-400 bg-red-500/10 border-red-500/30',
+const SIHUA_CLASS: Record<string, string> = {
+  '禄': 'palace-sihua-badge palace-sihua-badge--lu',
+  '权': 'palace-sihua-badge palace-sihua-badge--quan',
+  '科': 'palace-sihua-badge palace-sihua-badge--ke',
+  '忌': 'palace-sihua-badge palace-sihua-badge--ji',
 };
 
 const starTypeClass: Record<Star['type'], string> = {
@@ -51,25 +54,24 @@ const SiHuaBadge = ({
   return (
     <span
       className={clsx(
-        'inline-flex items-center text-[8px] px-1 rounded-full border leading-none py-px font-bold ml-1 flex-shrink-0',
-        SIHUA_STYLES[siHua],
-        overlay && 'border-dashed opacity-80',
+        SIHUA_CLASS[siHua],
+        overlay && 'palace-sihua-badge--overlay',
         onClick && 'cursor-pointer hover:opacity-100',
       )}
       onClick={onClick}
     >
-      {overlay && label && <span className="mr-px opacity-70">{label}</span>}
-      {siHua}
+      {overlay && label ? `${label}${siHua}` : siHua}
     </span>
   );
 };
 
 export default function PalaceCell({
   palace, onClick, onStarClick, isSelected, isSanFang, delay = 0,
-  overlayStarSiHua, overlayLabel, onSiHuaClick,
+  overlayStarSiHua, overlayLabel, onSiHuaClick, disableEntranceAnimation = false,
 }: PalaceCellProps) {
   const { branch, stem, name, stars, daXianAge, isCurrentDaXian, isMingGong, isShenGong } = palace;
   const ganzhi = `${STEMS[stem]}${BRANCHES[branch]}`;
+  const displayName = palaceShortName(name);
 
   const majorStars = stars.filter(s => s.type === 'major');
   const luckyStars = stars.filter(s => s.type === 'lucky');
@@ -96,17 +98,21 @@ export default function PalaceCell({
         {star.type === 'major' && star.brightnessLabel && (
           <span className="palace-star-brightness">{star.brightnessLabel}</span>
         )}
-        {star.siHua && <SiHuaBadge siHua={star.siHua} />}
-        {overlaySiHua && (
-          <SiHuaBadge
-            siHua={overlaySiHua}
-            overlay
-            label={overlayLabel}
-            onClick={e => {
-              e.stopPropagation();
-              onSiHuaClick?.(star.name, overlaySiHua);
-            }}
-          />
+        {(star.siHua || overlaySiHua) && (
+          <span className="palace-star-badges">
+            {star.siHua && <SiHuaBadge siHua={star.siHua} />}
+            {overlaySiHua && (
+              <SiHuaBadge
+                siHua={overlaySiHua}
+                overlay
+                label={overlayLabel}
+                onClick={e => {
+                  e.stopPropagation();
+                  onSiHuaClick?.(star.name, overlaySiHua);
+                }}
+              />
+            )}
+          </span>
         )}
       </button>
     );
@@ -114,9 +120,9 @@ export default function PalaceCell({
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.92 }}
+      initial={disableEntranceAnimation ? false : { opacity: 0, scale: 0.92 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.35, delay, ease: 'easeOut' }}
+      transition={disableEntranceAnimation ? { duration: 0 } : { duration: 0.35, delay, ease: 'easeOut' }}
       onClick={onClick}
       className={clsx(
         'palace-cell relative flex flex-col p-1.5 cursor-pointer transition-all duration-200 h-full',
@@ -177,13 +183,13 @@ export default function PalaceCell({
           )}
             style={!isMingGong && !isShenGong ? { color: 'var(--t-faint)' } : undefined}
           >
-            {name}
+            {displayName}
           </span>
           {isMingGong && (
-            <span className="text-[7px] text-amber-500/80 border border-amber-500/30 px-0.5 rounded leading-tight">命</span>
+            <span className="palace-cell-tag palace-cell-tag--ming">命</span>
           )}
           {isShenGong && (
-            <span className="text-[7px] text-sky-500/80 border border-sky-500/30 px-0.5 rounded leading-tight">身</span>
+            <span className="palace-cell-tag palace-cell-tag--shen">身</span>
           )}
         </div>
       </div>

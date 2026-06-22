@@ -81,7 +81,10 @@ export interface DaXian {
 export interface ZiweiChart {
   birthInfo: BirthInfo;
   lunarInfo: LunarInfo;
+  /** 节气四柱（节令换月） */
   birthPillars?: [string, string, string, string];
+  /** 非节气四柱（农历月份换月） */
+  birthPillarsNonJieQi?: [string, string, string, string];
   mingGongBranch: number;    // 命宫地支
   shenGongBranch: number;    // 身宫地支
   wuxingJu: number;          // 五行局 (2,3,4,5,6)

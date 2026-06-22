@@ -63,15 +63,7 @@ function parseWuxingJu(name: string): number {
   return 3;
 }
 
-function getBirthPillars(year: number, month: number, day: number, hourBranch: number): [string, string, string, string] {
-  const lunar = Solar.fromYmd(year, month, day).getLunar();
-  const yearPillar = `${lunar.getYearGan()}${lunar.getYearZhi()}`;
-  const monthPillar = `${lunar.getMonthGan()}${lunar.getMonthZhi()}`;
-  const dayPillar = `${lunar.getDayGan()}${lunar.getDayZhi()}`;
-  const dayStem = STEMS.indexOf(lunar.getDayGan());
-  const hourStem = dayStem >= 0 ? STEMS[((dayStem % 5) * 2 + hourBranch) % 10] : STEMS[0];
-  return [yearPillar, monthPillar, dayPillar, `${hourStem}${BRANCHES[hourBranch]}`];
-}
+import { computeBirthPillarsJieQi, computeBirthPillarsNonJieQi } from './chart-view';
 
 // ─── 主函数：生成命盘 ────────────────────────────────────────────
 export function generateChart(birthInfo: BirthInfo): ZiweiChart {
@@ -180,7 +172,8 @@ export function generateChart(birthInfo: BirthInfo): ZiweiChart {
   const chartBase = {
     birthInfo,
     lunarInfo,
-    birthPillars: getBirthPillars(year, month, day, hour),
+    birthPillars: computeBirthPillarsJieQi(year, month, day, hour),
+    birthPillarsNonJieQi: computeBirthPillarsNonJieQi(year, month, day, hour),
     mingGongBranch: mingGongBranch >= 0 ? mingGongBranch : 0,
     shenGongBranch: shenGongBranch >= 0 ? shenGongBranch : 0,
     wuxingJu,

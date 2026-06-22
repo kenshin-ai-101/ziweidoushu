@@ -21,6 +21,7 @@ import {
   wenmoConfigToSearchParams,
   type WenmoConfig,
 } from '@/lib/ziwei/school-config';
+import { applyDaXianIndex, pickLiunianYearForDaXian } from '@/lib/ziwei/chart-view';
 import type { BirthInfo, Palace, Star, ZiweiChart } from '@/lib/ziwei/types';
 import type { TimeView } from '@/components/TimeNav';
 
@@ -50,6 +51,7 @@ export function ChartOraclePage() {
   const [selectedSiHua, setSelectedSiHua] = useState<SelectedSiHua | null>(null);
 
   const [timeView, setTimeView] = useState<TimeView>('mingpan');
+  const [daXianIndex, setDaXianIndex] = useState(0);
   const [liunianYear, setLiunianYear] = useState(new Date().getFullYear());
   const [liuyueMonth, setLiuyueMonth] = useState(new Date().getMonth() + 1);
   const [liuriDay, setLiuriDay] = useState(new Date().getDate());
@@ -84,6 +86,7 @@ export function ChartOraclePage() {
       }
       const data = await res.json() as ZiweiChart;
       setChart(data);
+      setDaXianIndex(data.currentDaXianIndex >= 0 ? data.currentDaXianIndex : 0);
       setSelectedPalace(null);
       setSelectedSiHua(null);
       setTimeView('mingpan');
@@ -187,6 +190,19 @@ export function ChartOraclePage() {
     });
   }, [chart]);
 
+  const displayChart = useMemo(() => {
+    if (!chart) return null;
+    return applyDaXianIndex(chart, daXianIndex);
+  }, [chart, daXianIndex]);
+
+  const handleDaXianIndexChange = useCallback((index: number) => {
+    if (!chart) return;
+    setDaXianIndex(index);
+    setLiunianYear(prev => pickLiunianYearForDaXian(chart, index, prev));
+    setSelectedPalace(null);
+    setSelectedSiHua(null);
+  }, [chart]);
+
   useEffect(() => {
     if (!chart) return;
     document.documentElement.setAttribute('data-theme', 'light');
@@ -194,11 +210,11 @@ export function ChartOraclePage() {
     document.body.style.background = '#fafafa';
   }, [chart]);
 
-  if (chart) {
+  if (chart && displayChart) {
     return (
       <div className="chart-page-root">
         <ChartTopbar
-          chart={chart}
+          chart={displayChart}
           view={timeView}
           liunianYear={liunianYear}
           liuyueMonth={liuyueMonth}
@@ -220,54 +236,65 @@ export function ChartOraclePage() {
           onSchoolConfigApply={handleSchoolConfigApply}
         />
 
-        <div className="chart-workspace">
-          <div className="chart-workspace-left">
-            <ChartBoard
-              chart={chart}
-              variant="production"
-              hideTimeNav
-              timeView={timeView}
-              liunianYear={liunianYear}
-              liuyueMonth={liuyueMonth}
-              liuriDay={liuriDay}
-              liushiHour={liushiHour}
-              onTimeViewChange={setTimeView}
-              onYearChange={setLiunianYear}
-              onMonthChange={setLiuyueMonth}
-              onDayChange={setLiuriDay}
-              onHourChange={setLiushiHour}
-              onPalaceSelect={setSelectedPalace}
-              onStarSelect={(star: Star, palace: Palace) => {
-                setSelectedPalace(palace);
-              }}
-              onSiHuaClick={(starName, siHua, view) => {
-                setSelectedSiHua({ starName, siHua, view });
-              }}
-            />
-            <PatternsLink chart={chart} />
-            <ChartTimeDrill
-              chart={chart}
-              view={timeView}
-              liunianYear={liunianYear}
-              liuyueMonth={liuyueMonth}
-              liuriDay={liuriDay}
-              liushiHour={liushiHour}
-              onViewChange={v => {
-                setTimeView(v);
-                setSelectedPalace(null);
-                setSelectedSiHua(null);
-              }}
-              onYearChange={setLiunianYear}
-              onMonthChange={setLiuyueMonth}
-              onDayChange={setLiuriDay}
-              onHourChange={setLiushiHour}
-            />
+        <div className="chart-workspace" data-testid="chart-workspace">
+          <aside className="chart-workspace-left" aria-label="命盘区">
+            <section className="chart-zone chart-zone--board" aria-label="命盘网格">
+              <ChartBoard
+                chart={displayChart}
+                variant="production"
+                hideTimeNav
+                timeView={timeView}
+                liunianYear={liunianYear}
+                liuyueMonth={liuyueMonth}
+                liuriDay={liuriDay}
+                liushiHour={liushiHour}
+                onTimeViewChange={setTimeView}
+                onYearChange={setLiunianYear}
+                onMonthChange={setLiuyueMonth}
+                onDayChange={setLiuriDay}
+                onHourChange={setLiushiHour}
+                onPalaceSelect={setSelectedPalace}
+                onStarSelect={(star: Star, palace: Palace) => {
+                  setSelectedPalace(palace);
+                }}
+                onSiHuaClick={(starName, siHua, view) => {
+                  setSelectedSiHua({ starName, siHua, view });
+                }}
+              />
+            </section>
+
+            <section className="chart-zone chart-zone--patterns" aria-label="古书格局">
+              <PatternsLink chart={displayChart} />
+            </section>
+
+            <section className="chart-zone chart-zone--time" aria-label="时间下钻">
+              <ChartTimeDrill
+                chart={displayChart}
+                daXianIndex={daXianIndex}
+                view={timeView}
+                liunianYear={liunianYear}
+                liuyueMonth={liuyueMonth}
+                liuriDay={liuriDay}
+                liushiHour={liushiHour}
+                onViewChange={v => {
+                  setTimeView(v);
+                  setSelectedPalace(null);
+                  setSelectedSiHua(null);
+                }}
+                onDaXianIndexChange={handleDaXianIndexChange}
+                onYearChange={setLiunianYear}
+                onMonthChange={setLiuyueMonth}
+                onDayChange={setLiuriDay}
+                onHourChange={setLiushiHour}
+              />
+            </section>
+
             <div className="chart-reset-wrap">
               <button type="button" className="chart-reset-btn" onClick={handleReset}>
                 重新起盘
               </button>
             </div>
-          </div>
+          </aside>
 
           <div className="chart-workspace-right">
             {famousPerson && (
@@ -277,7 +304,7 @@ export function ChartOraclePage() {
             )}
             <div className="chart-workspace-insight">
               <InsightPanel
-                chart={chart}
+                chart={displayChart}
                 timeView={timeView}
                 liunianYear={liunianYear}
                 liuyueMonth={liuyueMonth}

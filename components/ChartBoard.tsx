@@ -6,6 +6,12 @@ import { BRANCHES, STEMS } from '@/lib/ziwei/constants';
 import PalaceCell from './PalaceCell';
 import TimeNav, { type TimeView } from './TimeNav';
 import { buildTimeOverlay, getTimeOverlayLabel } from '@/lib/ziwei/sihua';
+import {
+  computeBirthPillarsJieQi,
+  computeBirthPillarsNonJieQi,
+  trueSolarOffsetMinutes,
+} from '@/lib/ziwei/chart-view';
+import PillarRow from './PillarRow';
 
 interface ChartBoardProps {
   chart: ZiweiChart;
@@ -161,12 +167,14 @@ export default function ChartBoard({
   const { birthInfo } = chart;
   const genderLabel = birthInfo.gender === 'male' ? '阳男' : '阴女';
   const placeLabel = [birthInfo.province, birthInfo.city].filter(Boolean).join(' ') || '未填出生地';
-  const pillars = chart.birthPillars ?? [
-    `${STEMS[chart.lunarInfo.yearStem]}${BRANCHES[chart.lunarInfo.yearBranch]}`,
-    `${STEMS[0]}${BRANCHES[0]}`,
-    `${STEMS[0]}${BRANCHES[0]}`,
-    `${STEMS[0]}${BRANCHES[birthInfo.hour]}`,
-  ];
+  const solarOffset = trueSolarOffsetMinutes(birthInfo.longitude);
+  const solarNote = birthInfo.longitude != null
+    ? `真太阳时${solarOffset >= 0 ? '+' : ''}${solarOffset}分`
+    : '未校正真太阳时';
+  const { year, month, day, hour } = birthInfo;
+  const pillars = chart.birthPillars ?? computeBirthPillarsJieQi(year, month, day, hour);
+  const nonJieQiPillars = chart.birthPillarsNonJieQi
+    ?? computeBirthPillarsNonJieQi(year, month, day, hour);
   const masters = getSoulBodyMasters(chart);
   const timeLabel = birthInfo.unknownTime
     ? '时辰不详（按子时起盘）'
@@ -233,6 +241,7 @@ export default function ChartBoard({
                 overlayStarSiHua={Object.keys(overlayData).length > 0 ? overlayData : undefined}
                 overlayLabel={overlayLabel}
                 onSiHuaClick={(starName, siHua) => onSiHuaClick?.(starName, siHua, timeView)}
+                disableEntranceAnimation={isProduction}
               />
             </div>
           );
@@ -240,9 +249,9 @@ export default function ChartBoard({
 
         {/* 中央信息区 */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
+          initial={isProduction ? false : { opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.5 }}
+          transition={isProduction ? { duration: 0 } : { delay: 0.5 }}
           className={`flex flex-col items-center justify-center gap-2 palace-center-tile${isProduction ? ' palace-center-tile--production' : ''}`}
           style={{ gridRow: '2 / 4', gridColumn: '2 / 4', background: 'var(--t-bg)' }}
         >
@@ -265,8 +274,13 @@ export default function ChartBoard({
               </div>
               <div className="palace-center-rule" />
               <div className="palace-center-title">节气四柱</div>
-              <div className="palace-center-pillars">
-                {pillars.map(p => <span key={p}>{p}</span>)}
+              <div className="palace-center-pillars palace-center-pillars--jieqi">
+                <PillarRow pillars={pillars} />
+              </div>
+              <div className="palace-center-rule" />
+              <div className="palace-center-title">非节气四柱</div>
+              <div className="palace-center-pillars palace-center-pillars--plain">
+                <PillarRow pillars={nonJieQiPillars} muted />
               </div>
               <div className="palace-center-rule" />
               <div className="palace-center-grid palace-center-grid--masters">
@@ -294,7 +308,7 @@ export default function ChartBoard({
                 <b className="sihua-ke">科</b>
                 <b className="sihua-ji">忌</b>
               </div>
-              <div className="palace-center-place">{placeLabel} · 真太阳时+6分</div>
+              <div className="palace-center-place">{placeLabel} · {solarNote}</div>
             </>
           ) : (
             <>
