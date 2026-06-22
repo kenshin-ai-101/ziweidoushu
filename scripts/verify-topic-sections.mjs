@@ -37,30 +37,63 @@ const chart = generateChart({
 
 const tabs = buildAllTopicAnalysisTabs(chart, TOPICS);
 
+const HEALTH_EXTRA_SECTIONS = [
+  '年干四化·关键宫位影响',
+  '倪师疾厄论 · 宫位主轴',
+  '星曜辅助 · 五行加重',
+];
+
+const HEALTH_FOOTER_MARKERS = [
+  '## 🌿 倪师人纪方案参考',
+  '## ⚙ 主辅煞组合精细论断',
+  '【倪师《天纪》· 星曜法则】',
+];
+
 let failed = 0;
 for (const topic of TOPICS) {
   const text = tabs[topic] ?? '';
   const headers = [...text.matchAll(/\*\*【([^】]+)】\*\*/g)].map(m => m[1]);
-  const required = [
-    `${TOPIC_LABEL[topic]}总览`,
-    '一句话定调',
-    '核心论断',
-    '命盘推演',
-    '三方四正联动',
-    '四化路径分析 · 落到你这盘',
-    '命盘依据',
-    '经典出处',
-    '⚠️ 风险提醒',
-  ];
+  const required = topic === 'health'
+    ? [
+        `${TOPIC_LABEL[topic]}总览`,
+        '一句话定调',
+        '核心论断',
+        '命盘推演',
+        '三方四正联动',
+        ...HEALTH_EXTRA_SECTIONS,
+        '命盘依据',
+        '经典出处',
+        '⚠️ 风险提醒',
+      ]
+    : [
+        `${TOPIC_LABEL[topic]}总览`,
+        '一句话定调',
+        '核心论断',
+        '命盘推演',
+        '三方四正联动',
+        '四化路径分析 · 落到你这盘',
+        '命盘依据',
+        '经典出处',
+        '⚠️ 风险提醒',
+      ];
+  const hasSihua = headers.some(h => h.startsWith('四化路径'));
   const missing = required.filter(h => !headers.includes(h));
-  const extra = headers.filter(h => !required.includes(h));
-  if (missing.length || extra.length) {
+  if (topic !== 'health' && !hasSihua) {
+    missing.push('四化路径（四化路径分析 · 落到你这盘 或 四化路径 · 你这盘）');
+  }
+  if (topic === 'health' && !hasSihua) {
+    missing.push('四化路径（四化路径分析 · 落到你这盘 或 四化路径 · 你这盘）');
+  }
+  const missingFooter = topic === 'health'
+    ? HEALTH_FOOTER_MARKERS.filter(m => !text.includes(m))
+    : [];
+  if (missing.length || missingFooter.length) {
     failed++;
     console.log(`✗ ${topic}`);
     if (missing.length) console.log('  missing:', missing.join(', '));
-    if (extra.length) console.log('  extra:', extra.join(', '));
+    if (missingFooter.length) console.log('  missing footer:', missingFooter.join(', '));
   } else {
-    console.log(`✓ ${topic} (${headers.length} sections)`);
+    console.log(`✓ ${topic} (${headers.length} sections${topic === 'health' ? ' + health footer' : ''})`);
   }
 }
 

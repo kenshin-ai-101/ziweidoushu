@@ -21,6 +21,15 @@ import {
   STAR_PALACE_LINE,
 } from './overview-knowledge';
 import { lookupTopicStarOverview } from './topic-overview-knowledge';
+import {
+  buildHealthMingAuxBlock,
+  buildHealthRenjiBlock,
+  buildHealthStarRulesFooter,
+  buildHealthYearSihuaBlock,
+  buildJieEBranchAxisBlock,
+  buildStarAuxBlock,
+  luckyNotesForJieEPalace,
+} from './health-analysis';
 import type { Palace, Star } from './types';
 
 const TOPIC_TO_COMBO_TOPIC: Partial<Record<TopicKey, ComboTopicKey | 'mingGong'>> = {
@@ -313,7 +322,12 @@ function topicPalaceLinks(chart: ZiweiChart, palace: Palace) {
   ];
 }
 
-function formatSanFangPalaceBlock(palace: Palace, role: string, isSelf: boolean): string[] {
+function formatSanFangPalaceBlock(
+  palace: Palace,
+  role: string,
+  isSelf: boolean,
+  topic?: TopicKey,
+): string[] {
   const lines: string[] = [];
   const hasEmpty = palaceHasEmptyMajors(palace);
 
@@ -342,19 +356,23 @@ function formatSanFangPalaceBlock(palace: Palace, role: string, isSelf: boolean)
     }
   }
 
-  lines.push(...luckyNotesForPalace(palace));
+  if (topic === 'health' && isSelf) {
+    lines.push(...luckyNotesForJieEPalace(palace));
+  } else {
+    lines.push(...luckyNotesForPalace(palace));
+  }
   lines.push('');
   return lines;
 }
 
-function buildTopicSanFang(chart: ZiweiChart, palace: Palace | undefined) {
+function buildTopicSanFang(chart: ZiweiChart, palace: Palace | undefined, topic?: TopicKey) {
   if (!palace) return '';
   const blocks: string[] = [];
   const links = topicPalaceLinks(chart, palace);
 
   for (const item of links) {
     if (!item.palace) continue;
-    blocks.push(...formatSanFangPalaceBlock(item.palace, item.role, item.isSelf));
+    blocks.push(...formatSanFangPalaceBlock(item.palace, item.role, item.isSelf, topic));
   }
 
   const trineStars = links
@@ -485,7 +503,9 @@ function buildTopicSihua(
     }
   }
 
-  lines.push(buildTopicYearSihuaAppendix(chart, topic, focusBranches, networkKeys));
+  if (topic === 'personality') {
+    lines.push(buildTopicYearSihuaAppendix(chart, topic, focusBranches, networkKeys));
+  }
 
   const temporal = buildTemporalSihuaAppendix(chart, options);
   if (temporal) {
@@ -547,9 +567,11 @@ function buildTopicRiskReminder(
     lines.push(`◆ 本宫未见明显重煞，${domain}风险多来自大限、流年触发；平时以稳守节奏、避免过度消耗为要。`);
   }
 
-  const dualBlock = buildDualStarBlockForTopic(stars, topic);
-  if (dualBlock) {
-    lines.push('', dualBlock);
+  if (topic !== 'health') {
+    const dualBlock = buildDualStarBlockForTopic(stars, topic);
+    if (dualBlock) {
+      lines.push('', dualBlock);
+    }
   }
 
   return lines.join('\n');
@@ -596,6 +618,45 @@ function buildTopicOverview(topic: TopicKey, palace: Palace | undefined, stars: 
   return [core || palaceText, core ? palaceText : '', action].filter(Boolean).join('\n\n');
 }
 
+function buildEnrichedHealthText(
+  chart: ZiweiChart,
+  baseText: string,
+  stars: string[],
+  options?: OverviewAnalysisOptions,
+) {
+  const palace = palaceByTopic(chart, 'health');
+  const parsed = parseDbMarkers(baseText);
+  const primaryStar = stars[0] ?? '';
+  const mingStars = getMingGongMainStars(chart);
+  const mingPrimary = mingStars[0] ?? '';
+
+  const { body: sihuaBody, title: sihuaTitle } = buildTopicSihua(chart, 'health', palace, options);
+  const yearSihua = buildHealthYearSihuaBlock(chart, palace);
+
+  const parts = [
+    section('健康总览', buildTopicOverview('health', palace, stars, parsed)),
+    section('一句话定调', parsed.dingdiao || `${TOPIC_PALACE_NAME.health}以${stars.join('、') || '本宫'}为主要气象，须合参三方四正。`),
+    section('核心论断', buildCoreWithOverlays(primaryStar, parsed, chart, palace) || parsed.lundian || baseText),
+    section('命盘推演', buildTopicTuiyan(chart, 'health', palace, stars)),
+    section('三方四正联动', buildTopicSanFang(chart, palace, 'health')),
+    section(sihuaTitle, sihuaBody),
+    yearSihua ? section('年干四化·关键宫位影响', yearSihua) : '',
+    section('倪师疾厄论 · 宫位主轴', buildJieEBranchAxisBlock(palace)),
+    section('星曜辅助 · 五行加重', buildStarAuxBlock(chart, palace, primaryStar)),
+    section('命盘依据', parsed.yiju || buildGenericBasis('health', palace, stars)),
+    section('经典出处', parsed.chuchu || buildGenericSource('health', stars)),
+    section('⚠️ 风险提醒', buildTopicRiskReminder(chart, 'health', palace, stars)),
+  ];
+
+  const footer = [
+    buildHealthRenjiBlock(primaryStar),
+    buildHealthMingAuxBlock(chart, mingPrimary),
+    buildHealthStarRulesFooter(palace, stars),
+  ].filter(Boolean).join('\n\n');
+
+  return [parts.filter(Boolean).join('\n\n'), footer].filter(Boolean).join('\n\n');
+}
+
 function buildEnrichedTopicText(
   chart: ZiweiChart,
   topic: TopicKey,
@@ -603,6 +664,10 @@ function buildEnrichedTopicText(
   stars: string[],
   options?: OverviewAnalysisOptions,
 ) {
+  if (topic === 'health') {
+    return buildEnrichedHealthText(chart, baseText, stars, options);
+  }
+
   const palace = palaceByTopic(chart, topic);
   const parsed = parseDbMarkers(baseText);
   const primaryStar = stars[0] ?? '';
@@ -613,7 +678,7 @@ function buildEnrichedTopicText(
     section('一句话定调', parsed.dingdiao || `${TOPIC_PALACE_NAME[topic]}以${stars.join('、') || '本宫'}为主要气象，须合参三方四正。`),
     section('核心论断', buildCoreWithOverlays(primaryStar, parsed, chart, palace) || parsed.lundian || baseText),
     section('命盘推演', buildTopicTuiyan(chart, topic, palace, stars)),
-    section('三方四正联动', buildTopicSanFang(chart, palace)),
+    section('三方四正联动', buildTopicSanFang(chart, palace, topic)),
     section(sihuaTitle, sihuaBody),
     section('命盘依据', parsed.yiju || buildGenericBasis(topic, palace, stars)),
     section('经典出处', parsed.chuchu || buildGenericSource(topic, stars)),
