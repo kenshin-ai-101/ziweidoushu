@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MetisLibraryHeader } from '@/components/MetisLibraryHeader';
 import { ALL_BOOKS, getBookBySlug, type Book } from '@/lib/classics';
+import { hasLibraryProAccess } from '@/lib/subscription/library-access';
 
 type BookSearchParams = {
   pro?: string;
@@ -27,11 +28,6 @@ export async function generateMetadata({ params }: { params: Promise<{ book: str
   };
 }
 
-function hasMockProAccess(searchParams: BookSearchParams) {
-  const value = searchParams.pro ?? searchParams.mockPro ?? searchParams.access;
-  return value === '1' || value === 'true' || value === 'pro';
-}
-
 export default async function BookPage({
   params,
   searchParams,
@@ -44,7 +40,7 @@ export default async function BookPage({
   const book = getBookBySlug(slug);
   if (!book) notFound();
 
-  if (hasMockProAccess(query ?? {})) {
+  if (await hasLibraryProAccess(query ?? {})) {
     return <UnlockedBookPage book={book} />;
   }
 

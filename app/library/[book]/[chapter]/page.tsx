@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MetisLibraryHeader } from '@/components/MetisLibraryHeader';
 import { ALL_BOOKS, getChapter } from '@/lib/classics';
+import { hasLibraryProAccess } from '@/lib/subscription/library-access';
 
 type ChapterSearchParams = {
   pro?: string;
@@ -27,11 +28,6 @@ export async function generateMetadata({ params }: { params: Promise<{ book: str
     title: `${result.chapter.title} · 《${result.book.title}》· 紫微斗数古籍`,
     description: result.chapter.subtitle || `《${result.book.title}》${result.chapter.title}原文`,
   };
-}
-
-function hasMockProAccess(searchParams: ChapterSearchParams) {
-  const value = searchParams.pro ?? searchParams.mockPro ?? searchParams.access;
-  return value === '1' || value === 'true' || value === 'pro';
 }
 
 function LockedChapterPage({ bookSlug, chapterIdx }: { bookSlug: string; chapterIdx: number }) {
@@ -90,7 +86,7 @@ export default async function ChapterPage({
   const result = getChapter(bookSlug, chapterIdx);
   if (!result) notFound();
 
-  if (!hasMockProAccess(query ?? {})) {
+  if (!(await hasLibraryProAccess(query ?? {}))) {
     return <LockedChapterPage bookSlug={bookSlug} chapterIdx={chapterIdx} />;
   }
 

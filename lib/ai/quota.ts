@@ -1,9 +1,13 @@
+import {
+  FREE_DAILY_INTERPRET_QUOTA,
+  PRO_DAILY_INTERPRET_QUOTA,
+} from '@/lib/subscription/plans';
+
 export const QUOTA_COOKIE_NAME = 'ziwei_ai_quota';
 
-export const FREE_DAILY_QUOTA = Number.parseInt(
-  process.env.AI_FREE_DAILY_QUOTA ?? '10',
-  10,
-);
+/** @deprecated use FREE_DAILY_INTERPRET_QUOTA from lib/subscription/plans */
+export const FREE_DAILY_QUOTA = FREE_DAILY_INTERPRET_QUOTA;
+export const PRO_DAILY_QUOTA = PRO_DAILY_INTERPRET_QUOTA;
 
 export interface QuotaState {
   date: string;
@@ -36,11 +40,15 @@ export function parseQuotaState(raw: string | undefined): QuotaState {
   if (!raw) return { date: today, used: 0, bonus: 0 };
   try {
     const parsed = JSON.parse(decodeURIComponent(raw)) as Partial<QuotaState>;
-    if (parsed.date !== today) return { date: today, used: 0, bonus: 0 };
+    const bonus = Math.max(0, parsed.bonus ?? 0);
+    if (parsed.date !== today) {
+      // Daily used resets at Beijing midnight; bonus credits persist until consumed.
+      return { date: today, used: 0, bonus };
+    }
     return {
       date: today,
       used: Math.max(0, parsed.used ?? 0),
-      bonus: Math.max(0, parsed.bonus ?? 0),
+      bonus,
     };
   } catch {
     return { date: today, used: 0, bonus: 0 };
@@ -55,8 +63,8 @@ export function buildQuotaCookieValue(state: QuotaState): string {
   return serializeQuotaState(state);
 }
 
-export function getQuotaRemaining(state: QuotaState): number {
-  return Math.max(0, FREE_DAILY_QUOTA - state.used) + state.bonus;
+export function getQuotaRemaining(state: QuotaState, dailyLimit = FREE_DAILY_INTERPRET_QUOTA): number {
+  return Math.max(0, dailyLimit - state.used) + state.bonus;
 }
 
 export type ConsumeQuotaResult =
@@ -66,6 +74,7 @@ export type ConsumeQuotaResult =
 export function consumeQuota(
   rawCookie: string | undefined,
   preferBonus: boolean,
+  dailyLimit = FREE_DAILY_INTERPRET_QUOTA,
 ): ConsumeQuotaResult {
   const state = parseQuotaState(rawCookie);
 
@@ -73,24 +82,24 @@ export function consumeQuota(
     const next: QuotaState = { ...state, bonus: state.bonus - 1 };
     return {
       ok: true,
-      remaining: getQuotaRemaining(next),
+      remaining: getQuotaRemaining(next, dailyLimit),
       state: next,
       usedBonus: true,
     };
   }
 
-  if (state.used >= FREE_DAILY_QUOTA) {
+  if (state.used >= dailyLimit) {
     return {
       ok: false,
       remaining: 0,
-      message: `今日免费次数（${FREE_DAILY_QUOTA} 次）已用完，明日 0 点（北京时间）重置`,
+      message: `今日免费次数（${dailyLimit} 次）已用完，明日 0 点（北京时间）重置`,
     };
   }
 
   const next: QuotaState = { ...state, used: state.used + 1 };
   return {
     ok: true,
-    remaining: getQuotaRemaining(next),
+    remaining: getQuotaRemaining(next, dailyLimit),
     state: next,
     usedBonus: false,
   };
@@ -103,6 +112,6 @@ export function rollbackQuota(state: QuotaState, usedBonus: boolean): QuotaState
   return { ...state, used: Math.max(0, state.used - 1) };
 }
 
-export function quotaExhaustedMessage(): string {
-  return `今日免费次数（${FREE_DAILY_QUOTA} 次）已用完，明日 0 点（北京时间）重置`;
+export function quotaExhaustedMessage(dailyLimit = FREE_DAILY_INTERPRET_QUOTA): string {
+  return `今日免费次数（${dailyLimit} 次）已用完，明日 0 点（北京时间）重置`;
 }

@@ -15,12 +15,16 @@ import {
 import { BRANCHES, STEMS } from '@/lib/ziwei/constants';
 import { buildTimeOverlay, getTemporalGanzhiInfo, getTimeOverlayLabel } from '@/lib/ziwei/sihua';
 import {
-  CHART_TOPIC_TABS_ALL,
+  CHART_TOPIC_TABS_EXTENDED,
+  CHART_TOPIC_TABS_MAIN,
   COLLAPSIBLE_SECTION_TITLES,
+  FREE_TOPIC_KEYS,
   PALACE_ROLES,
   PALACE_TO_TOPIC,
   type TopicKey,
 } from '@/lib/ziwei/db-analysis';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 import ChatPanel, { type ChatPanelHandle } from '@/components/ChatPanel';
 import {
   OVERVIEW_AXIS_PALACES,
@@ -696,6 +700,8 @@ export default function InsightPanel({
   selectedSiHua?: SelectedSiHua | null;
   onExport?: () => void;
 }) {
+  const router = useRouter();
+  const { isPro } = useAuth();
   const [panelMode, setPanelMode] = useState<PanelMode>('analysis');
   const [tabCache, setTabCache] = useState<AnalysisCache>({});
   const tabCacheRef = useRef(tabCache);
@@ -916,6 +922,10 @@ export default function InsightPanel({
   }, [selectedPalaceBranch, selectedSiHua, chartToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTopicClick = async (topic: TopicKey) => {
+    if (!FREE_TOPIC_KEYS.has(topic) && !isPro) {
+      router.push(`/subscription?redirect=${encodeURIComponent('/chart')}`);
+      return;
+    }
     lastFocusKey.current = '';
     activeTopicRef.current = topic;
     setActiveTopic(topic);
@@ -1037,7 +1047,7 @@ export default function InsightPanel({
       <div className={panelMode === 'analysis' ? 'insight-analysis-pane' : 'insight-analysis-pane insight-analysis-pane--hidden'}>
         <div className="insight-topics">
           <div className="insight-topic-seg insight-topic-seg--wrap">
-            {CHART_TOPIC_TABS_ALL.map(t => (
+            {CHART_TOPIC_TABS_MAIN.map(t => (
               <button
                 key={t.key}
                 type="button"
@@ -1046,6 +1056,18 @@ export default function InsightPanel({
                 disabled={loading || followUpLoading}
               >
                 {t.label}
+              </button>
+            ))}
+            {CHART_TOPIC_TABS_EXTENDED.map(t => (
+              <button
+                key={t.key}
+                type="button"
+                className={`${activeTopic === t.key ? 'seg-active' : ''}${!isPro ? ' seg-locked' : ''}`}
+                onClick={() => void handleTopicClick(t.key)}
+                disabled={loading || followUpLoading}
+                title={!isPro ? '专业版解锁' : undefined}
+              >
+                {t.label}{!isPro ? ' 🔒' : ''}
               </button>
             ))}
           </div>

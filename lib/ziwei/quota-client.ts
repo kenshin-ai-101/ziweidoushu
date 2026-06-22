@@ -1,11 +1,8 @@
+import { FREE_DAILY_QUOTA, getBeijingDateKey } from '@/lib/ai/quota';
 import {
-  FREE_DAILY_QUOTA,
-  QUOTA_COOKIE_NAME,
-  getBeijingDateKey,
-  getQuotaRemaining,
-  parseQuotaState,
-  readBrowserCookie,
-} from '@/lib/ai/quota';
+  getClientSharedQuotaRemaining,
+  notifySharedQuotaStoreChange,
+} from '@/lib/subscription/shared-quota-client';
 
 const MIRROR_KEY = 'ai_quota_mirror';
 export const QUOTA_UPDATE_EVENT = 'ziwei-quota-update';
@@ -15,13 +12,8 @@ interface QuotaMirror {
   remaining: number;
 }
 
-export function resolveQuotaRemaining(cookieRaw?: string): number {
-  return getQuotaRemaining(parseQuotaState(cookieRaw));
-}
-
 export function getClientQuotaRemaining(): number {
-  if (typeof window === 'undefined') return FREE_DAILY_QUOTA;
-  return resolveQuotaRemaining(readBrowserCookie(QUOTA_COOKIE_NAME));
+  return getClientSharedQuotaRemaining(FREE_DAILY_QUOTA);
 }
 
 export function syncQuotaRemaining(remaining: number) {
@@ -36,6 +28,7 @@ export function syncQuotaRemaining(remaining: number) {
     /* ignore */
   }
   window.dispatchEvent(new CustomEvent(QUOTA_UPDATE_EVENT, { detail: payload.remaining }));
+  notifySharedQuotaStoreChange();
 }
 
 export function subscribeQuotaRemaining(onChange: (remaining: number) => void): () => void {

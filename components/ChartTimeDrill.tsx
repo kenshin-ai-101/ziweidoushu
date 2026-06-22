@@ -23,12 +23,14 @@ interface ChartTimeDrillProps {
   liuyueMonth: number;
   liuriDay: number;
   liushiHour: number;
+  isPro?: boolean;
   onViewChange: (view: TimeView) => void;
   onDaXianIndexChange: (index: number) => void;
   onYearChange: (year: number) => void;
   onMonthChange: (month: number) => void;
   onDayChange: (day: number) => void;
   onHourChange: (hour: number) => void;
+  onProRequired?: () => void;
 }
 
 function virtualAge(birthYear: number, year: number) {
@@ -114,12 +116,14 @@ export default function ChartTimeDrill({
   liuyueMonth,
   liuriDay,
   liushiHour,
+  isPro = false,
   onViewChange,
   onDaXianIndexChange,
   onYearChange,
   onMonthChange,
   onDayChange,
   onHourChange,
+  onProRequired,
 }: ChartTimeDrillProps) {
   const yearOptions = yearsForDaXian(chart, daXianIndex);
   const currentYear = new Date().getFullYear();
@@ -138,6 +142,14 @@ export default function ChartTimeDrill({
     scrollActiveIntoView(daxianScrollRef.current);
     scrollActiveIntoView(liunianScrollRef.current);
   }, [daXianIndex, highlightLiunianYear]);
+
+  const requirePro = (targetView: TimeView, action: () => void) => {
+    if (!isPro && (targetView === 'liuyue' || targetView === 'liuri' || targetView === 'liushi')) {
+      onProRequired?.();
+      return;
+    }
+    action();
+  };
 
   return (
     <div className="chart-time-drill">
@@ -192,10 +204,10 @@ export default function ChartTimeDrill({
             active={view === 'liuyue' && liuyueMonth === i + 1}
             minWidth={50}
             ariaLabel={`流月 ${label}`}
-            onClick={() => {
+            onClick={() => requirePro('liuyue', () => {
               onViewChange('liuyue');
               onMonthChange(i + 1);
-            }}
+            })}
           >
             <div className="chart-time-card-month">{label}</div>
           </DrillCard>
@@ -209,10 +221,10 @@ export default function ChartTimeDrill({
             active={view === 'liuri' && liuriDay === i + 1}
             minWidth={44}
             ariaLabel={`流日 ${label}`}
-            onClick={() => {
+            onClick={() => requirePro('liuri', () => {
               onViewChange('liuri');
               onDayChange(i + 1);
-            }}
+            })}
           >
             <div className="chart-time-card-month">{label}</div>
           </DrillCard>
@@ -226,10 +238,10 @@ export default function ChartTimeDrill({
             active={view === 'liushi' && liushiHour === i}
             minWidth={44}
             ariaLabel={`流时 ${label}`}
-            onClick={() => {
+            onClick={() => requirePro('liushi', () => {
               onViewChange('liushi');
               onHourChange(i);
-            }}
+            })}
           >
             <div className="chart-time-card-month">{label}</div>
           </DrillCard>

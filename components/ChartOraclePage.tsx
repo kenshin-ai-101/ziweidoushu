@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import BirthForm, { type BirthFormState } from '@/components/BirthForm';
 import ChartBoard from '@/components/ChartBoard';
 import ChartTopbar from '@/components/ChartTopbar';
@@ -10,6 +11,7 @@ import ShareModal from '@/components/ShareModal';
 import FamousPersonCard from '@/components/FamousPersonCard';
 import PatternsLink from '@/components/PatternsLink';
 import { OracleChrome, OracleHero } from '@/components/OracleSubpage';
+import { useAuth } from '@/hooks/use-auth';
 import { formToSearchParams, searchParamsToForm, formToBirthInfo } from '@/lib/ziwei/share';
 import { useHistory } from '@/lib/ziwei/history';
 import { findFamousPersonMatch } from '@/lib/ziwei/famous';
@@ -38,6 +40,8 @@ function getCurrentShichenBranch(): number {
 }
 
 export function ChartOraclePage() {
+  const router = useRouter();
+  const { isPro } = useAuth();
   const [chart, setChart] = useState<ZiweiChart | null>(null);
   const [savedForm, setSavedForm] = useState<BirthFormState | null>(null);
   const [formKey, setFormKey] = useState(0);
@@ -276,6 +280,8 @@ export function ChartOraclePage() {
                 liuyueMonth={liuyueMonth}
                 liuriDay={liuriDay}
                 liushiHour={liushiHour}
+                isPro={isPro}
+                onProRequired={() => router.push('/subscription?redirect=/chart')}
                 onViewChange={v => {
                   setTimeView(v);
                   setSelectedPalace(null);

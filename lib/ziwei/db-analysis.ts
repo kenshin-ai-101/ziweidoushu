@@ -71,8 +71,8 @@ export const CHART_TOPIC_TABS_EXTENDED: { key: TopicKey; label: string }[] = [
 
 export const CHART_TOPIC_TABS_ALL = [...CHART_TOPIC_TABS_MAIN, ...CHART_TOPIC_TABS_EXTENDED];
 
-/** @deprecated 本地复刻已全部开放，保留兼容旧引用 */
-export const FREE_TOPIC_KEYS = new Set(CHART_TOPIC_TABS_ALL.map(t => t.key));
+/** 生产 chart 页 e5 — 免费层可见话题 */
+export const FREE_TOPIC_KEYS = new Set(CHART_TOPIC_TABS_MAIN.map(t => t.key));
 
 /** 生产 chart 页 e4 — 宫位主管领域 */
 export const PALACE_ROLES: Record<string, string> = {

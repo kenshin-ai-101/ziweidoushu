@@ -2,12 +2,21 @@ import { NextRequest } from 'next/server';
 import { DeepSeekStream } from '@/lib/ai/stream';
 import {
   HEMING_QUOTA_COOKIE_NAME,
-  buildQuotaCookieValue,
-  consumeHemingQuota,
-  getHemingQuotaRemaining,
-  rollbackHemingQuota,
+  buildQuotaCookieValue as buildHemingQuotaCookieValue,
 } from '@/lib/ai/heming-quota';
-import type { QuotaState } from '@/lib/ai/quota';
+import {
+  QUOTA_COOKIE_NAME,
+  buildQuotaCookieValue,
+  serializeQuotaState,
+  type QuotaState,
+} from '@/lib/ai/quota';
+import { readSession } from '@/lib/auth/session';
+import { resolveInterpretDailyLimit } from '@/lib/subscription/access';
+import {
+  consumeSharedQuota,
+  rollbackSharedQuota,
+  snapshotSharedQuota,
+} from '@/lib/subscription/shared-quota';
 import {
   buildFollowUpHemingMessages,
   buildHemingSystemPrompt,
@@ -32,8 +41,16 @@ type HemingRequestBody = {
   messages?: HemingMessage[];
 };
 
-function quotaCookieHeader(state: QuotaState): string {
-  return `${HEMING_QUOTA_COOKIE_NAME}=${buildQuotaCookieValue(state)}; Path=/; Max-Age=${QUOTA_COOKIE_MAX_AGE}; SameSite=Lax`;
+function interpretCookieHeader(state: QuotaState): string {
+  return `${QUOTA_COOKIE_NAME}=${buildQuotaCookieValue(state)}; Path=/; Max-Age=${QUOTA_COOKIE_MAX_AGE}; SameSite=Lax`;
+}
+
+function hemingCookieHeader(state: QuotaState): string {
+  return `${HEMING_QUOTA_COOKIE_NAME}=${buildHemingQuotaCookieValue(state)}; Path=/; Max-Age=${QUOTA_COOKIE_MAX_AGE}; SameSite=Lax`;
+}
+
+function quotaSetCookieHeaders(interpret: QuotaState, heming: QuotaState): string[] {
+  return [interpretCookieHeader(interpret), hemingCookieHeader(heming)];
 }
 
 function isChart(value: unknown): value is ZiweiChart {
@@ -51,10 +68,22 @@ function cleanMessages(messages: HemingMessage[] | undefined): HemingMessage[] |
 
 export async function POST(req: NextRequest) {
   let consumed:
-    | { ok: true; remaining: number; state: QuotaState; usedBonus: boolean }
+    | {
+        ok: true;
+        remaining: number;
+        usedBonus: boolean;
+        interpret: QuotaState;
+        heming: QuotaState;
+      }
     | null = null;
+  let dailyLimit = 3;
 
   try {
+    const session = await readSession(req);
+    if (!session) {
+      return Response.json({ error: '登录后可使用合盘', code: 'NEED_LOGIN' }, { status: 401 });
+    }
+
     const body = await req.json() as HemingRequestBody;
     const { chartA, chartB } = body;
 
@@ -66,8 +95,14 @@ export async function POST(req: NextRequest) {
     }
 
     const preferBonus = req.headers.get('X-Quota-Prefer') === 'bonus';
-    const quotaCookie = req.cookies.get(HEMING_QUOTA_COOKIE_NAME)?.value;
-    const quotaResult = consumeHemingQuota(quotaCookie, preferBonus);
+    dailyLimit = await resolveInterpretDailyLimit(req);
+    const quotaResult = consumeSharedQuota(
+      req.cookies.get(QUOTA_COOKIE_NAME)?.value,
+      req.cookies.get(HEMING_QUOTA_COOKIE_NAME)?.value,
+      'heming',
+      preferBonus,
+      dailyLimit,
+    );
 
     if (!quotaResult.ok) {
       return new Response(JSON.stringify({ error: quotaResult.message }), {
@@ -75,11 +110,18 @@ export async function POST(req: NextRequest) {
         headers: {
           'Content-Type': 'application/json',
           'X-Quota-Remaining': '0',
+          'X-Quota-Daily': String(dailyLimit),
         },
       });
     }
 
-    consumed = quotaResult;
+    consumed = {
+      ok: true,
+      remaining: quotaResult.remaining,
+      usedBonus: quotaResult.usedBonus,
+      interpret: quotaResult.interpret,
+      heming: quotaResult.heming,
+    };
 
     const question = body.question?.trim();
     const messages = question
@@ -95,27 +137,42 @@ export async function POST(req: NextRequest) {
       messages,
     });
 
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
-        'X-Quota-Remaining': String(quotaResult.remaining),
-        'Set-Cookie': quotaCookieHeader(quotaResult.state),
-      },
+    const headers = new Headers({
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'X-Quota-Remaining': String(quotaResult.remaining),
     });
+    for (const cookie of quotaSetCookieHeaders(quotaResult.interpret, quotaResult.heming)) {
+      headers.append('Set-Cookie', cookie);
+    }
+
+    return new Response(stream, { headers });
   } catch (err) {
     console.error('[/api/heming]', err);
 
     if (consumed?.ok) {
-      const rolled = rollbackHemingQuota(consumed.state, consumed.usedBonus);
+      const rolled = rollbackSharedQuota(
+        consumed.interpret,
+        consumed.heming,
+        'heming',
+        consumed.usedBonus,
+      );
+      const remaining = snapshotSharedQuota(
+        serializeQuotaState(rolled.interpret),
+        serializeQuotaState(rolled.heming),
+        dailyLimit,
+      ).remaining;
+      const headers = new Headers({
+        'Content-Type': 'application/json',
+        'X-Quota-Remaining': String(remaining),
+      });
+      for (const cookie of quotaSetCookieHeaders(rolled.interpret, rolled.heming)) {
+        headers.append('Set-Cookie', cookie);
+      }
       return new Response(JSON.stringify({ error: '合盘服务暂时不可用' }), {
         status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Quota-Remaining': String(getHemingQuotaRemaining(rolled)),
-          'Set-Cookie': quotaCookieHeader(rolled),
-        },
+        headers,
       });
     }
 

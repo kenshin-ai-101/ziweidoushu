@@ -1,4 +1,8 @@
 import {
+  FREE_DAILY_HEMING_QUOTA,
+  PRO_DAILY_HEMING_QUOTA,
+} from '@/lib/subscription/plans';
+import {
   buildQuotaCookieValue,
   getBeijingDateKey,
   parseQuotaState,
@@ -10,45 +14,49 @@ import {
 
 export const HEMING_QUOTA_COOKIE_NAME = 'ziwei_heming_quota';
 
-export const HEMING_FREE_DAILY_QUOTA = Number.parseInt(
-  process.env.HEMING_FREE_DAILY_QUOTA ?? '10',
-  10,
-);
+/** @deprecated use FREE_DAILY_HEMING_QUOTA from lib/subscription/plans */
+export const HEMING_FREE_DAILY_QUOTA = FREE_DAILY_HEMING_QUOTA;
+export const HEMING_PRO_DAILY_QUOTA = PRO_DAILY_HEMING_QUOTA;
 
-export function getHemingQuotaRemaining(state: QuotaState): number {
-  return Math.max(0, HEMING_FREE_DAILY_QUOTA - state.used) + state.bonus;
+export function getHemingQuotaRemaining(
+  state: QuotaState,
+  dailyLimit = FREE_DAILY_HEMING_QUOTA,
+): number {
+  return Math.max(0, dailyLimit - state.used) + state.bonus;
 }
 
 export function consumeHemingQuota(
   rawCookie: string | undefined,
   preferBonus: boolean,
+  dailyLimit = FREE_DAILY_HEMING_QUOTA,
 ): ConsumeQuotaResult {
   const state = parseQuotaState(rawCookie);
   const today = getBeijingDateKey();
-  const normalized: QuotaState = state.date === today ? state : { date: today, used: 0, bonus: 0 };
+  const normalized: QuotaState =
+    state.date === today ? state : { date: today, used: 0, bonus: state.bonus };
 
   if (preferBonus && normalized.bonus > 0) {
     const next: QuotaState = { ...normalized, bonus: normalized.bonus - 1 };
     return {
       ok: true,
-      remaining: getHemingQuotaRemaining(next),
+      remaining: getHemingQuotaRemaining(next, dailyLimit),
       state: next,
       usedBonus: true,
     };
   }
 
-  if (normalized.used >= HEMING_FREE_DAILY_QUOTA) {
+  if (normalized.used >= dailyLimit) {
     return {
       ok: false,
       remaining: 0,
-      message: `合盘今日免费次数（${HEMING_FREE_DAILY_QUOTA} 次）已用完，明日 0 点（北京时间）重置`,
+      message: `合盘今日免费次数（${dailyLimit} 次）已用完，明日 0 点（北京时间）重置`,
     };
   }
 
   const next: QuotaState = { ...normalized, used: normalized.used + 1 };
   return {
     ok: true,
-    remaining: getHemingQuotaRemaining(next),
+    remaining: getHemingQuotaRemaining(next, dailyLimit),
     state: next,
     usedBonus: false,
   };

@@ -1,9 +1,10 @@
+import { HEMING_FREE_DAILY_QUOTA } from '@/lib/ai/heming-quota';
+import { getBeijingDateKey } from '@/lib/ai/quota';
 import {
-  HEMING_FREE_DAILY_QUOTA,
-  HEMING_QUOTA_COOKIE_NAME,
-  getHemingQuotaRemaining,
-} from '@/lib/ai/heming-quota';
-import { getBeijingDateKey, parseQuotaState, readBrowserCookie } from '@/lib/ai/quota';
+  getClientSharedQuotaRemaining,
+  notifySharedQuotaStoreChange,
+  resolveSharedQuotaSnapshot,
+} from '@/lib/subscription/shared-quota-client';
 
 const MIRROR_KEY = 'heming_quota_mirror';
 export const HEMING_QUOTA_UPDATE_EVENT = 'ziwei-heming-quota-update';
@@ -13,15 +14,18 @@ interface QuotaMirror {
   remaining: number;
 }
 
-/** Resolve remaining from encoded cookie value (or fresh quota when absent). */
-export function resolveHemingQuotaRemaining(cookieRaw?: string): number {
-  return getHemingQuotaRemaining(parseQuotaState(cookieRaw));
+/** Resolve shared-pool remaining from both quota cookies (server / SSR). */
+export function resolveHemingQuotaRemaining(
+  interpretRaw?: string,
+  hemingRaw?: string,
+  dailyLimit = HEMING_FREE_DAILY_QUOTA,
+): number {
+  return resolveSharedQuotaSnapshot(interpretRaw, hemingRaw, dailyLimit).remaining;
 }
 
-/** Client quota: cookie is source of truth; localStorage mirror is display cache only. */
+/** Client quota: shared pool across interpret + heming cookies. */
 export function getClientHemingQuotaRemaining(): number {
-  if (typeof window === 'undefined') return HEMING_FREE_DAILY_QUOTA;
-  return resolveHemingQuotaRemaining(readBrowserCookie(HEMING_QUOTA_COOKIE_NAME));
+  return getClientSharedQuotaRemaining(HEMING_FREE_DAILY_QUOTA);
 }
 
 export function syncHemingQuotaRemaining(remaining: number) {
@@ -36,6 +40,7 @@ export function syncHemingQuotaRemaining(remaining: number) {
     /* ignore */
   }
   window.dispatchEvent(new CustomEvent(HEMING_QUOTA_UPDATE_EVENT, { detail: payload.remaining }));
+  notifySharedQuotaStoreChange();
 }
 
 export function subscribeHemingQuotaRemaining(onChange: (remaining: number) => void): () => void {

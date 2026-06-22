@@ -4,28 +4,24 @@ import { useSyncExternalStore } from 'react';
 import { FREE_DAILY_QUOTA } from '@/lib/ai/quota';
 import { HEMING_FREE_DAILY_QUOTA } from '@/lib/ai/heming-quota';
 import {
-  getClientHemingQuotaRemaining,
-  subscribeHemingQuotaStore,
-} from '@/lib/ziwei/heming-quota-client';
-import {
-  getClientQuotaRemaining,
-  subscribeQuotaStore,
-} from '@/lib/ziwei/quota-client';
+  getClientSharedQuotaRemaining,
+  subscribeSharedQuotaStore,
+} from '@/lib/subscription/shared-quota-client';
 
-/** Hydration-safe AI interpret quota from quota cookie. */
+/** Hydration-safe shared AI quota (interpret + heming). */
 export function useQuotaRemaining(serverRemaining = FREE_DAILY_QUOTA): number {
   return useSyncExternalStore(
-    subscribeQuotaStore,
-    getClientQuotaRemaining,
+    subscribeSharedQuotaStore,
+    () => getClientSharedQuotaRemaining(FREE_DAILY_QUOTA),
     () => serverRemaining,
   );
 }
 
-/** Hydration-safe heming quota from heming quota cookie. */
+/** Alias — same shared pool as interpret quota. */
 export function useHemingQuotaRemaining(serverRemaining = HEMING_FREE_DAILY_QUOTA): number {
   return useSyncExternalStore(
-    subscribeHemingQuotaStore,
-    getClientHemingQuotaRemaining,
+    subscribeSharedQuotaStore,
+    () => getClientSharedQuotaRemaining(HEMING_FREE_DAILY_QUOTA),
     () => serverRemaining,
   );
 }

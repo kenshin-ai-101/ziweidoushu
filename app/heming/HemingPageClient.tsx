@@ -2,6 +2,8 @@
 import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import BirthForm, { type BirthFormState } from '@/components/BirthForm';
+import LoginModal from '@/components/LoginModal';
+import { useAuth } from '@/hooks/use-auth';
 import {
   syncHemingQuotaRemaining,
 } from '@/lib/ziwei/heming-quota-client';
@@ -56,6 +58,8 @@ function AiContent({ text, streaming }: { text: string; streaming?: boolean }) {
 }
 
 export default function HemingPageClient({ serverQuotaRemaining }: { serverQuotaRemaining: number }) {
+  const { isLoggedIn } = useAuth();
+  const [loginOpen, setLoginOpen] = useState(false);
   // ─── 双方命盘状态 ─────────────────────────────────────────
   const [chartA, setChartA] = useState<ZiweiChart | null>(null);
   const [chartB, setChartB] = useState<ZiweiChart | null>(null);
@@ -90,6 +94,10 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
   // ─── 统一入口：起盘 + 合盘分析 ─────────────────────────────
   const runAnalysis = useCallback(async (q?: string) => {
     setFormError(null);
+    if (!isLoggedIn) {
+      setLoginOpen(true);
+      return;
+    }
     if (!isFormReady(formA) || !isFormReady(formB)) {
       setFormError('请先填写双方完整出生信息');
       return;
@@ -147,6 +155,18 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
         }
       }
 
+      if (res.status === 401) {
+        const payload = await res.json().catch(() => ({})) as { error?: string; code?: string };
+        if (payload.code === 'NEED_LOGIN') {
+          setLoginOpen(true);
+          setAnalysisError(payload.error ?? '登录后可使用合盘');
+        } else {
+          setAnalysisError(payload.error ?? '登录状态已失效，请重新登录后再合盘');
+        }
+        if (isFollowUp) setChatMessages(items => items.slice(0, -2));
+        return;
+      }
+
       if (res.status === 402) {
         const payload = await res.json().catch(() => ({})) as { error?: string };
         setAnalysisError(payload.error ?? '合盘今日免费次数已用完');
@@ -201,7 +221,7 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
     } finally {
       setAnalyzing(false);
     }
-  }, [chartA, chartB, chatMessages, formA, formB, resolveChart, quotaRemaining]);
+  }, [chartA, chartB, chatMessages, formA, formB, resolveChart, quotaRemaining, isLoggedIn, analysis]);
 
   const cardStyle = {
     background: 'linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.8) 100%)',
@@ -560,6 +580,7 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
           .heming-nav-burger { display: inline-flex; }
         }
       `}</style>
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onSuccess={() => setLoginOpen(false)} />
     </div>
   );
 }
