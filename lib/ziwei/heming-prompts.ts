@@ -115,7 +115,7 @@ export function buildFollowUpHemingMessages(params: {
   return [
     {
       role: 'assistant',
-      content: params.previousAnalysis || '尚无主分析。',
+      content: params.previousAnalysis?.trim() || '尚无主分析。',
     },
     {
       role: 'user',

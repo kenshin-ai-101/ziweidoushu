@@ -16,6 +16,7 @@ import {
   type QuotaState,
 } from '@/lib/ai/quota';
 import { resolveInterpretDailyLimit } from '@/lib/subscription/access';
+import { FREE_DAILY_INTERPRET_QUOTA } from '@/lib/subscription/plans';
 import { buildSystemPrompt } from '@/lib/ziwei/interpret-prompts';
 import { computeChartToken, getChartToken } from '@/lib/ziwei/chart-token';
 import type { ZiweiChart } from '@/lib/ziwei/types';
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
         heming: QuotaState;
       }
     | null = null;
-  let dailyLimit = 3;
+  let dailyLimit = FREE_DAILY_INTERPRET_QUOTA;
 
   try {
     const body = await req.json();

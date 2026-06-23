@@ -22,6 +22,10 @@ import {
   syncQuotaRemaining,
 } from '@/lib/ziwei/quota-client';
 import {
+  FREE_DAILY_INTERPRET_QUOTA,
+  PRO_DAILY_INTERPRET_QUOTA,
+} from '@/lib/subscription/plans';
+import {
   buildSessionFromMessages,
   clearAiChatSessions,
   createAiChatSession,
@@ -82,13 +86,14 @@ const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatPanel
   { chart, embedded },
   ref,
 ) {
-  const { user, isLoggedIn, loading: authLoading } = useAuth();
+  const { user, isLoggedIn, isPro, loading: authLoading } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessions, setSessions] = useState<AiChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const quotaRemaining = useQuotaRemaining();
+  const dailyLimit = isPro ? PRO_DAILY_INTERPRET_QUOTA : FREE_DAILY_INTERPRET_QUOTA;
+  const quotaRemaining = useQuotaRemaining(dailyLimit);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<Message[]>([]);
   const loadingRef = useRef(false);

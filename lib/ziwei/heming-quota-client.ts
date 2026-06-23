@@ -1,5 +1,5 @@
-import { HEMING_FREE_DAILY_QUOTA } from '@/lib/ai/heming-quota';
 import { getBeijingDateKey } from '@/lib/ai/quota';
+import { FREE_DAILY_INTERPRET_QUOTA } from '@/lib/subscription/plans';
 import {
   getClientSharedQuotaRemaining,
   notifySharedQuotaStoreChange,
@@ -18,14 +18,14 @@ interface QuotaMirror {
 export function resolveHemingQuotaRemaining(
   interpretRaw?: string,
   hemingRaw?: string,
-  dailyLimit = HEMING_FREE_DAILY_QUOTA,
+  dailyLimit = FREE_DAILY_INTERPRET_QUOTA,
 ): number {
   return resolveSharedQuotaSnapshot(interpretRaw, hemingRaw, dailyLimit).remaining;
 }
 
 /** Client quota: shared pool across interpret + heming cookies. */
-export function getClientHemingQuotaRemaining(): number {
-  return getClientSharedQuotaRemaining(HEMING_FREE_DAILY_QUOTA);
+export function getClientHemingQuotaRemaining(dailyLimit = FREE_DAILY_INTERPRET_QUOTA): number {
+  return getClientSharedQuotaRemaining(dailyLimit);
 }
 
 export function syncHemingQuotaRemaining(remaining: number) {

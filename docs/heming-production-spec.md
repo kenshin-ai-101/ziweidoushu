@@ -171,32 +171,23 @@ data: [DONE]
 Local files:
 
 - `app/api/heming/route.ts`
+- `app/heming/HemingPageClient.tsx`
+- `app/heming/page.tsx`
 - `lib/ziwei/heming-prompts.ts`
 - `lib/ai/heming-quota.ts`
 - `lib/ziwei/heming-quota-client.ts`
-- `app/heming/page.tsx`
+- `lib/ziwei/heming-cache.ts`
+- `lib/ziwei/heming-session.ts`
 
-Local behavior:
+Local behavior (B + C parity):
 
-- No login/payment/SMS gate.
-- `/api/generate` remains unchanged.
-- `/api/heming` accepts:
-
-```ts
-{
-  chartA: ZiweiChart;
-  chartB: ZiweiChart;
-  question?: string;
-  previousAnalysis?: string;
-  messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
-}
-```
-
-- Main analysis uses `buildInitialHemingMessages()`.
-- Follow-ups send `messages` history plus `question` and `previousAnalysis`.
-- The route uses `DeepSeekStream`, not a mock.
-- The route uses a separate `ziwei_heming_quota` cookie and `HEMING_FREE_DAILY_QUOTA`, default `10`.
-- On model failure, quota is rolled back.
+- **Login gate (C)**: `/api/heming` returns `401 {"error":"登录后可使用合盘","code":"NEED_LOGIN"}` when no session. Client opens `LoginModal` before calling the API.
+- **Quota UI (B)**: Chip title `AI 追问每日免费 N 次，北京时间 0 点重置`; logged-in label `今日剩余 X 次` or exhausted `今日次数已用完` + server message. Free users default to 10/day; pro users default to 20/day. Fetches `/api/quota` when logged in; syncs `X-Quota-Remaining` from SSE responses.
+- **Shared pool**: Logged-in users consume the same daily pool as interpret (`ziwei_ai_quota` + `ziwei_heming_quota` cookies). Sends `X-Quota-Prefer: bonus` like interpret.
+- `/api/generate` unchanged (client-side fallback via `generateChart()` in dev).
+- Request body: `{ chartA, chartB, question?, previousAnalysis? }`.
+- Main analysis uses `buildInitialHemingMessages()`; follow-ups use `buildFollowUpHemingMessages()`.
+- DeepSeek SSE; quota rollback on model failure.
 
 ## Prompt Outline
 
@@ -240,7 +231,7 @@ No new Ni Hai Xia quotes were invented. Any quote-like material comes from the e
   - POST sample B: `200`.
 - Local `/api/heming` main analysis:
   - POST `{ chartA, chartB }`: `200`.
-  - Headers included `content-type: text/event-stream`, `set-cookie: ziwei_heming_quota=...used:1...`, `x-quota-remaining: 9`.
+  - Headers included `content-type: text/event-stream` and `x-quota-remaining` equal to the current daily quota because first analysis does not consume quota.
   - Sample SSE:
 
 ```text
@@ -258,7 +249,7 @@ data: {"delta":{"text":"3"}}
 
 - Local `/api/heming` follow-up:
   - POST `{ chartA, chartB, question, previousAnalysis, messages }` with `X-Quota-Prefer: bonus` and a test bonus cookie: `200`.
-  - Headers included `content-type: text/event-stream`, `set-cookie: ziwei_heming_quota=...bonus:0...`, `x-quota-remaining: 9`.
+  - Headers included `content-type: text/event-stream`, `set-cookie: ziwei_heming_quota=...`, and `x-quota-remaining` one lower than the current daily quota.
   - Sample SSE:
 
 ```text
@@ -281,11 +272,10 @@ data: [DONE]
 - Local smoke script:
   - `npm run smoke:heming -- http://localhost:3100` passed on 2026-06-22.
   - Verified `GET /heming`, two `/api/generate` calls, main `/api/heming` SSE, section detection, and follow-up `/api/heming` SSE.
-  - Observed `x-quota-remaining: 9` in the current development environment.
+  - Observed `x-quota-remaining` follows the current account daily quota; pro accounts use 20/day.
 
 ## Remaining Gaps
 
-- Production `/api/heming` full streamed LLM text and exact server prompt cannot be captured anonymously because production returns `NEED_LOGIN`.
-- Local does not implement login/payment/SMS, by design.
-- Local quota is cookie/localStorage based and observable, not account-backed like production.
-- Production appears to send only `previousAnalysis` for follow-up context; local additionally sends structured `messages` history to satisfy the local parity goal for follow-up history.
+- Production `/api/heming` full streamed LLM text and exact server prompt cannot be captured without a logged-in account with available quota.
+- Production payment/SMS flows are mirrored via local dev auth (`LoginModal` + `/api/auth/*`), not third-party SMS in dev.
+- Local quota for logged-in users is cookie-based (shared with interpret), matching production observable behavior; account-backed quota sync uses `/api/quota`.

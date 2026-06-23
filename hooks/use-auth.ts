@@ -10,7 +10,9 @@ import {
 import type { PublicUser } from '@/lib/auth/types';
 
 export function useAuth() {
-  const [user, setUser] = useState<PublicUser | null>(() => readCachedUser());
+  // Start null on server and client so SSR markup matches the first client render.
+  // readCachedUser() runs in useEffect only — avoids hydration mismatch on isPro styling.
+  const [user, setUser] = useState<PublicUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

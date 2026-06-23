@@ -1,25 +1,90 @@
 'use client';
 import Link from 'next/link';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { MembershipEditionButton } from '@/components/MembershipEditionButton';
 import BirthForm, { type BirthFormState } from '@/components/BirthForm';
 import LoginModal from '@/components/LoginModal';
+import { quotaExhaustedMessage } from '@/lib/ai/quota';
+import type { AccountQuotaResponse } from '@/lib/auth/account-quota';
 import { useAuth } from '@/hooks/use-auth';
 import {
   syncHemingQuotaRemaining,
 } from '@/lib/ziwei/heming-quota-client';
 import { useHemingQuotaRemaining } from '@/hooks/use-quota-remaining';
+import { subscribeSharedQuotaStore } from '@/lib/subscription/shared-quota-client';
 import { formToBirthInfo } from '@/lib/ziwei/share';
 import { saveHemingHistory } from '@/lib/ziwei/heming-history';
+import {
+  buildHemingCacheKey,
+  readHemingCache,
+  writeHemingCache,
+} from '@/lib/ziwei/heming-cache';
+import {
+  loadHemingSession,
+  saveHemingSession,
+  type HemingFollowUpEntry,
+} from '@/lib/ziwei/heming-session';
 import { generateChart as buildChart } from '@/lib/ziwei/algorithm';
 import type { BirthInfo, ZiweiChart } from '@/lib/ziwei/types';
 
-interface HemingMessage {
-  role: 'user' | 'assistant';
-  content: string;
+function hemingProgressCopy(tick: number, isFollowUp: boolean): string {
+  if (isFollowUp) return 'AI 正在针对你的问题深度分析…';
+  if (tick < 3) return '正在对比双方命盘…';
+  if (tick < 8) return '正在分析宫位互应…';
+  if (tick < 15) return '正在结合古籍推理缘分…';
+  if (tick < 25) return 'AI 深度推理中，请稍候…';
+  return '即将完成…';
 }
 
-// ─── AiContent 渲染器（与 InsightPanel 一致）────────────────
+async function readSseBody(
+  body: ReadableStream<Uint8Array>,
+  onDelta: (text: string) => void,
+  signal?: AbortSignal,
+): Promise<string> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let text = '';
+  let buffer = '';
+
+  try {
+    while (true) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6);
+        if (data === '[DONE]') return text;
+        try {
+          const delta = JSON.parse(data).delta?.text ?? '';
+          if (delta) {
+            text += delta;
+            onDelta(text);
+          }
+        } catch { /* skip */ }
+      }
+    }
+    if (buffer.startsWith('data: ')) {
+      const data = buffer.slice(6).trim();
+      if (data && data !== '[DONE]') {
+        try {
+          const delta = JSON.parse(data).delta?.text ?? '';
+          if (delta) {
+            text += delta;
+            onDelta(text);
+          }
+        } catch { /* skip */ }
+      }
+    }
+  } finally {
+    try { reader.releaseLock(); } catch { /* skip */ }
+  }
+
+  return text;
+}
 function AiContent({ text, streaming }: { text: string; streaming?: boolean }) {
   const lines = text.split('\n');
   return (
@@ -59,28 +124,44 @@ function AiContent({ text, streaming }: { text: string; streaming?: boolean }) {
   );
 }
 
-export default function HemingPageClient({ serverQuotaRemaining }: { serverQuotaRemaining: number }) {
-  const { isLoggedIn } = useAuth();
+export default function HemingPageClient({
+  serverQuotaRemaining,
+  serverDailyLimit,
+  serverIsLoggedIn,
+}: {
+  serverQuotaRemaining: number;
+  serverDailyLimit: number;
+  serverIsLoggedIn: boolean;
+}) {
+  const { isLoggedIn: clientIsLoggedIn, loading: authLoading } = useAuth();
+  const isLoggedIn = clientIsLoggedIn || serverIsLoggedIn;
   const [loginOpen, setLoginOpen] = useState(false);
-  // ─── 双方命盘状态 ─────────────────────────────────────────
+  const [accountQuota, setAccountQuota] = useState<AccountQuotaResponse | null>(null);
   const [chartA, setChartA] = useState<ZiweiChart | null>(null);
   const [chartB, setChartB] = useState<ZiweiChart | null>(null);
-  // 双方表单状态由 BirthForm onFormSave 同步到此处，统一按钮触发起盘
   const [formA, setFormA] = useState<BirthFormState | null>(null);
   const [formB, setFormB] = useState<BirthFormState | null>(null);
 
-  // ─── AI 合盘分析状态 ─────────────────────────────────────
   const [analysis, setAnalysis] = useState('');
-  const [chatMessages, setChatMessages] = useState<HemingMessage[]>([]);
+  const [followUps, setFollowUps] = useState<HemingFollowUpEntry[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
+  const [progressTick, setProgressTick] = useState(0);
   const [question, setQuestion] = useState('');
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const quotaRemaining = useHemingQuotaRemaining(serverQuotaRemaining);
+  const dailyMax = accountQuota?.max ?? serverDailyLimit;
+  const quotaRemaining = useHemingQuotaRemaining(dailyMax, serverQuotaRemaining);
+  const quotaTitle = `AI 追问每日免费 ${dailyMax} 次，北京时间 0 点重置（起盘与首次合盘分析不占用）`;
+  const quotaLabel = !isLoggedIn
+    ? '登录后使用'
+    : quotaRemaining <= 0
+      ? '今日次数已用完'
+      : `今日剩余 ${quotaRemaining} 次`;
+  const quotaExhausted = isLoggedIn && quotaRemaining <= 0;
   const analysisRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  // ─── 起盘（本地算法，避免 dev 下 /api/generate 缓存异常）──
-  const resolveChart = useCallback((info: BirthInfo): ZiweiChart | null => {
+  const resolveChartLocal = useCallback((info: BirthInfo): ZiweiChart | null => {
     try {
       return buildChart(info);
     } catch (err) {
@@ -89,168 +170,245 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
     }
   }, []);
 
-  // 表单是否填齐
+  const fetchChart = useCallback(async (info: BirthInfo): Promise<ZiweiChart | null> => {
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(info),
+      });
+      if (res.ok) return await res.json() as ZiweiChart;
+    } catch {
+      /* fallback below */
+    }
+    return resolveChartLocal(info);
+  }, [resolveChartLocal]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setAccountQuota(null);
+      return;
+    }
+
+    let active = true;
+
+    const refreshQuota = () => {
+      fetch('/api/quota', { credentials: 'include' })
+        .then(res => (res.ok ? res.json() : null))
+        .then(data => {
+          if (!active || !data) return;
+          const next = data as AccountQuotaResponse;
+          setAccountQuota(next);
+          syncHemingQuotaRemaining(next.remaining);
+        })
+        .catch(() => {});
+    };
+
+    refreshQuota();
+    const unsubscribe = subscribeSharedQuotaStore(refreshQuota);
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    const session = loadHemingSession();
+    if (!session) return;
+    setFormA(session.formA);
+    setFormB(session.formB);
+    if (session.chartA) setChartA(session.chartA);
+    if (session.chartB) setChartB(session.chartB);
+    setAnalysis(session.analysis || '');
+    setFollowUps(session.followUps || []);
+  }, []);
+
+  useEffect(() => {
+    if (!analyzing) return;
+    const timer = window.setInterval(() => {
+      setProgressTick(t => t + 1);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [analyzing]);
+
   const isFormReady = (f: BirthFormState | null): boolean =>
     !!(f && f.year && f.month && f.day && f.gender && (f.unknownTime || (f.clockHour !== '' && f.clockMinute !== '')));
 
-  // ─── 统一入口：起盘 + 合盘分析 ─────────────────────────────
+  const persistSession = useCallback((
+    nextAnalysis: string,
+    nextFollowUps: HemingFollowUpEntry[],
+    cA: ZiweiChart,
+    cB: ZiweiChart,
+  ) => {
+    if (!formA || !formB) return;
+    saveHemingSession({
+      formA,
+      formB,
+      chartA: cA,
+      chartB: cB,
+      analysis: nextAnalysis,
+      followUps: nextFollowUps,
+    });
+  }, [formA, formB]);
+
   const runAnalysis = useCallback(async (q?: string) => {
     setFormError(null);
-    if (!isLoggedIn) {
-      setLoginOpen(true);
-      return;
-    }
     if (!isFormReady(formA) || !isFormReady(formB)) {
       setFormError('请先填写双方完整出生信息');
       return;
     }
-    if (quotaRemaining <= 0) {
-      setAnalysisError('合盘今日免费次数已用完，明日 0 点（北京时间）重置');
+
+    if (!authLoading && !isLoggedIn) {
+      setLoginOpen(true);
       return;
     }
 
     const trimmedQuestion = q?.trim();
-    const isFollowUp = Boolean(trimmedQuestion && analysis && chatMessages.length > 0);
-    setAnalyzing(true);
-    if (!isFollowUp) {
-      setAnalysis('');
-      setChatMessages([]);
-    } else {
-      setChatMessages(items => [
-        ...items,
-        { role: 'user', content: trimmedQuestion! },
-        { role: 'assistant', content: '' },
-      ]);
+    const isFollowUp = Boolean(trimmedQuestion && analysis.trim());
+
+    if (isFollowUp && quotaExhausted) {
+      setAnalysisError(quotaExhaustedMessage(dailyMax));
+      return;
     }
+    setAnalyzing(true);
+    setProgressTick(0);
     setAnalysisError(null);
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    if (isFollowUp) {
+      setFollowUps(items => [...items, { question: trimmedQuestion!, answer: '' }]);
+    } else {
+      setAnalysis('');
+      setFollowUps([]);
+    }
 
     try {
-      let cA = chartA;
-      let cB = chartB;
-      const newA = cA ?? resolveChart(formToBirthInfo(formA!));
-      const newB = cB ?? resolveChart(formToBirthInfo(formB!));
-      cA = newA;
-      cB = newB;
-      if (!cA || !cB) {
-        setAnalysisError('起盘失败，请检查双方出生信息');
-        setAnalyzing(false);
+      const infoA = formToBirthInfo(formA!);
+      const infoB = formToBirthInfo(formB!);
+      const cacheKey = buildHemingCacheKey(formA!, formB!, isFollowUp ? trimmedQuestion : undefined);
+      const cached = readHemingCache(cacheKey);
+      if (cached) {
+        if (isFollowUp) {
+          setFollowUps(items => {
+            const next = [...items];
+            if (next.length > 0) next[next.length - 1] = { question: trimmedQuestion!, answer: cached };
+            if (chartA && chartB) persistSession(analysis, next, chartA, chartB);
+            return next;
+          });
+        } else {
+          setAnalysis(cached);
+          if (chartA && chartB) persistSession(cached, [], chartA, chartB);
+        }
         return;
       }
-      if (!chartA) setChartA(cA);
-      if (!chartB) setChartB(cB);
+
+      const [newA, newB] = await Promise.all([
+        chartA ?? fetchChart(infoA),
+        chartB ?? fetchChart(infoB),
+      ]);
+      if (!newA || !newB) {
+        setAnalysisError('起盘失败，请检查双方出生信息');
+        if (isFollowUp) setFollowUps(items => items.slice(0, -1));
+        return;
+      }
+      if (!chartA) setChartA(newA);
+      if (!chartB) setChartB(newB);
 
       const res = await fetch('/api/heming', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Quota-Prefer': 'bonus',
+        },
+        credentials: 'include',
+        signal: controller.signal,
         body: JSON.stringify(
           isFollowUp
-            ? { chartA: cA, chartB: cB, question: trimmedQuestion, previousAnalysis: analysis, messages: chatMessages }
-            : { chartA: cA, chartB: cB, question: trimmedQuestion || undefined },
+            ? { chartA: newA, chartB: newB, question: trimmedQuestion, previousAnalysis: analysis }
+            : { chartA: newA, chartB: newB },
         ),
       });
 
       const quotaHeader = res.headers.get('X-Quota-Remaining');
       if (quotaHeader) {
         const remaining = Number.parseInt(quotaHeader, 10);
-        if (Number.isFinite(remaining)) {
-          syncHemingQuotaRemaining(remaining);
-        }
+        if (Number.isFinite(remaining)) syncHemingQuotaRemaining(remaining);
       }
 
       if (res.status === 401) {
-        const payload = await res.json().catch(() => ({})) as { error?: string; code?: string };
+        const payload = await res.json().catch(() => ({})) as { code?: string; error?: string };
         if (payload.code === 'NEED_LOGIN') {
           setLoginOpen(true);
-          setAnalysisError(payload.error ?? '登录后可使用合盘');
         } else {
-          setAnalysisError(payload.error ?? '登录状态已失效，请重新登录后再合盘');
+          setAnalysisError(payload.error ?? '请先登录后再使用合盘');
         }
-        if (isFollowUp) setChatMessages(items => items.slice(0, -2));
+        if (isFollowUp) setFollowUps(items => items.slice(0, -1));
         return;
       }
 
       if (res.status === 402) {
         const payload = await res.json().catch(() => ({})) as { error?: string };
         setAnalysisError(payload.error ?? '合盘今日免费次数已用完');
-        if (isFollowUp) setChatMessages(items => items.slice(0, -2));
+        if (isFollowUp) setFollowUps(items => items.slice(0, -1));
         return;
       }
 
-      if (!res.ok || !res.body) throw new Error('request_failed');
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let text = '';
-      let buffer = '';
-      let doneStreaming = false;
-
-      const appendDelta = (delta: string) => {
-        if (!delta) return;
-        text += delta;
-        if (isFollowUp) {
-          setChatMessages(items => {
-            const next = [...items];
-            if (next.length > 0) next[next.length - 1] = { role: 'assistant', content: text };
-            return next;
-          });
-        } else {
-          setAnalysis(text);
-        }
-      };
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() ?? '';
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const data = line.slice(6);
-            if (data === '[DONE]') {
-              doneStreaming = true;
-              continue;
-            }
-            try {
-              appendDelta(JSON.parse(data).delta?.text ?? '');
-            } catch { /* skip */ }
-          }
-          if (doneStreaming) break;
-        }
-
-        if (buffer.startsWith('data: ')) {
-          const data = buffer.slice(6).trim();
-          if (data && data !== '[DONE]') {
-            try {
-              appendDelta(JSON.parse(data).delta?.text ?? '');
-            } catch { /* skip */ }
-          }
-        }
-      } finally {
-        try {
-          reader.releaseLock();
-        } catch { /* skip */ }
+      if (res.status === 429) {
+        setAnalysisError('请求过于频繁，请等几秒再试');
+        if (isFollowUp) setFollowUps(items => items.slice(0, -1));
+        return;
       }
 
-      const nextMessages: HemingMessage[] = isFollowUp
-        ? [...chatMessages, { role: 'user', content: trimmedQuestion! }, { role: 'assistant', content: text }]
-        : [
-            { role: 'user', content: trimmedQuestion || '请对甲乙双方进行完整紫微合盘分析' },
-            { role: 'assistant', content: text },
-          ];
-      setChatMessages(nextMessages);
-      if (!isFollowUp && text.trim() && formA && formB) {
-        saveHemingHistory(formA, formB);
+      if (!res.ok || !res.body) {
+        setAnalysisError(res.status >= 500 ? 'AI 服务器繁忙，请稍后重试' : '分析暂时不可用，请重试');
+        if (isFollowUp) setFollowUps(items => items.slice(0, -1));
+        return;
+      }
+
+      const text = await readSseBody(
+        res.body,
+        streamed => {
+          if (isFollowUp) {
+            setFollowUps(items => {
+              const next = [...items];
+              if (next.length > 0) next[next.length - 1] = { question: trimmedQuestion!, answer: streamed };
+              return next;
+            });
+          } else {
+            setAnalysis(streamed);
+          }
+        },
+        controller.signal,
+      );
+
+      writeHemingCache(cacheKey, text);
+      if (isFollowUp) {
+        setFollowUps(items => {
+          const next = [...items];
+          if (next.length > 0) next[next.length - 1] = { question: trimmedQuestion!, answer: text };
+          persistSession(analysis, next, newA, newB);
+          return next;
+        });
+      } else {
+        setAnalysis(text);
+        saveHemingHistory(formA!, formB!);
+        persistSession(text, [], newA, newB);
       }
       setTimeout(() => analysisRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-    } catch {
-      if (isFollowUp) setChatMessages(items => items.slice(0, -2));
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
+      if (isFollowUp) setFollowUps(items => items.slice(0, -1));
       setAnalysisError('分析暂时不可用，请重试');
     } finally {
       setAnalyzing(false);
+      abortRef.current = null;
     }
-  }, [chartA, chartB, chatMessages, formA, formB, resolveChart, quotaRemaining, isLoggedIn, analysis]);
+  }, [analysis, authLoading, chartA, chartB, dailyMax, fetchChart, formA, formB, isLoggedIn, persistSession, quotaExhausted]);
+
+  const progressText = hemingProgressCopy(progressTick, analyzing && !!analysis.trim());
 
   const cardStyle = {
     background: 'linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.8) 100%)',
@@ -267,14 +425,7 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
     marginBottom: '16px', display: 'block',
   };
 
-  const followUpPairs = chatMessages.slice(2).reduce<Array<{ question: string; answer: string }>>((items, message) => {
-    if (message.role === 'user') {
-      items.push({ question: message.content, answer: '' });
-    } else if (items.length > 0) {
-      items[items.length - 1].answer = message.content;
-    }
-    return items;
-  }, []);
+  const followUpPairs = followUps;
 
   return (
     <div style={{ minHeight: '100vh', background: '#fafafa', color: '#000' }}>
@@ -328,7 +479,7 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
           margin: '0 auto', gap: '16px',
         }}>
           <span style={{ fontSize: '14px', color: '#6b6b6b', letterSpacing: '0.3em', textTransform: 'uppercase' }}>
-            02 / SYNASTRY · 合盘分析
+            03 / SYNASTRY · 合盘分析
           </span>
           <div style={{ flex: 1 }} />
           <span style={{ fontSize: '14px', color: '#6b6b6b' }}>感情 · 合伙 · 亲子 · 朋友</span>
@@ -341,7 +492,7 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
         {/* 标题 */}
         <div style={{ textAlign: 'center', marginBottom: '48px', paddingTop: '24px' }}>
           <div style={{ fontSize: '14px', letterSpacing: '0.3em', color: '#6b6b6b', marginBottom: '14px', textTransform: 'uppercase' }}>
-            02 / SYNASTRY
+            03 / SYNASTRY
           </div>
           <h1 style={{ fontSize: 'clamp(36px, 6vw, 64px)', fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1, color: '#000', marginBottom: '12px' }}>
             紫微合盘
@@ -392,12 +543,12 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
             <span style={{ color: 'var(--ac)', opacity: 0.6 }}>◉</span>
             <span style={{ fontSize: '14px', letterSpacing: '0.3em', color: 'var(--tx-3)' }}>合盘分析 · HEMING</span>
             <span style={{ flex: 1 }} />
-            <span title="合盘每日免费 10 次，北京时间 0 点重置" style={{
-              fontSize: '14px', color: quotaRemaining > 0 ? 'var(--tx-3)' : '#dc2626',
+            <span title={quotaTitle} style={{
+              fontSize: '14px', color: quotaExhausted ? '#dc2626' : 'var(--tx-3)',
               background: 'rgba(0,0,0,0.06)',
               border: '0.5px solid rgba(0,0,0,0.20)', padding: '2px 8px',
               borderRadius: 'var(--r-pill)', letterSpacing: '0.04em',
-            }}>今日剩余 {quotaRemaining} 次</span>
+            }}>{quotaLabel}</span>
           </div>
 
           {/* 状态分支 */}
@@ -409,7 +560,6 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
               </div>
               <button
                 onClick={() => runAnalysis()}
-                disabled={quotaRemaining <= 0}
                 className="liquid-btn"
                 style={{
                   padding: '14px 40px', borderRadius: 'var(--r-pill)', border: '0.5px solid rgba(0,0,0,0.4)',
@@ -419,7 +569,9 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
                   boxShadow: '0 4px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(255,255,255,0.1)',
                   transition: 'transform 0.15s',
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+                }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; }}
               >
                 开始合盘分析
@@ -432,14 +584,14 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
             </div>
           )}
 
-          {analyzing && !analysis && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '40px 0', color: 'var(--tx-3)', fontSize: '13px' }}>
+          {analyzing && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: analysis ? '16px 0 0' : '40px 0', color: 'var(--tx-3)', fontSize: '13px' }}>
               <div style={{
                 width: '14px', height: '14px',
                 border: '2px solid var(--bdr-med)', borderTopColor: 'var(--ac)',
                 borderRadius: '50%', animation: 'spin 0.8s linear infinite',
               }} />
-              正在对比双方命盘…
+              {progressText}
             </div>
           )}
 
@@ -494,6 +646,12 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
               针对此次合盘继续追问
             </div>
 
+            {quotaExhausted && (
+              <div style={{ fontSize: '13px', color: '#dc2626', lineHeight: 1.7 }}>
+                {quotaExhaustedMessage(dailyMax)}
+              </div>
+            )}
+
             {/* 快捷问题 */}
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {[
@@ -506,7 +664,7 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
                 <button
                   key={q}
                   onClick={() => { setQuestion(q); runAnalysis(q); }}
-                  disabled={analyzing}
+                  disabled={analyzing || quotaExhausted}
                   style={{
                     fontSize: '12px', padding: '6px 14px',
                     borderRadius: 'var(--r-pill)',
@@ -531,14 +689,14 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
                 value={question}
                 onChange={e => setQuestion(e.target.value)}
                 onKeyDown={e => {
-                  if (e.key === 'Enter' && !analyzing && question.trim()) {
+                  if (e.key === 'Enter' && !analyzing && !quotaExhausted && question.trim()) {
                     const next = question.trim();
                     setQuestion('');
                     runAnalysis(next);
                   }
                 }}
                 placeholder="继续追问，如：哪几年是两人感情关键期？"
-                disabled={analyzing}
+                disabled={analyzing || quotaExhausted}
                 className="input-base"
                 style={{ fontSize: '13px', flex: 1 }}
               />
@@ -549,7 +707,7 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
                   setQuestion('');
                   runAnalysis(next);
                 }}
-                disabled={analyzing || !question.trim()}
+                disabled={analyzing || !question.trim() || quotaExhausted}
                 style={{
                   padding: '10px 20px', borderRadius: 'var(--r-sm)', border: 'none',
                   background: analyzing ? 'var(--bg-2)' : 'var(--tx-0)',
@@ -566,6 +724,23 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
           </div>
         )}
       </div>
+
+      <LoginModal
+        open={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        onSuccess={() => {
+          setLoginOpen(false);
+          fetch('/api/quota', { credentials: 'include' })
+            .then(res => (res.ok ? res.json() : null))
+            .then(data => {
+              if (!data) return;
+              const next = data as AccountQuotaResponse;
+              setAccountQuota(next);
+              syncHemingQuotaRemaining(next.remaining);
+            })
+            .catch(() => {});
+        }}
+      />
 
       <style>{`
         .heming-pill-link {
@@ -609,7 +784,6 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
           .heming-nav-burger { display: inline-flex; }
         }
       `}</style>
-      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onSuccess={() => setLoginOpen(false)} />
     </div>
   );
 }

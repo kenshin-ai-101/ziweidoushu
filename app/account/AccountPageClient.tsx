@@ -499,7 +499,7 @@ export default function AccountPageClient({
                 badge={(quota.bonusCredits ?? 0) > 0}
               />
               <p style={{ color: 'var(--tx-3)', fontSize: 12.5, lineHeight: 1.7, marginTop: 12 }}>
-                每日额度按北京时间 0 点重置；额外次数由后台发放、用完即止、不每日恢复。单盘 AI 提问与合盘共用这两份额度。
+                每日额度按北京时间 0 点重置；额外次数由后台发放、用完即止、不每日恢复。起盘与首次合盘分析不占用额度；单盘 AI 提问与合盘追问共用这两份额度。
               </p>
             </>
           )}

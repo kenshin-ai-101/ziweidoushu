@@ -1,4 +1,5 @@
-import { FREE_DAILY_QUOTA, getBeijingDateKey } from '@/lib/ai/quota';
+import { getBeijingDateKey } from '@/lib/ai/quota';
+import { FREE_DAILY_INTERPRET_QUOTA } from '@/lib/subscription/plans';
 import {
   getClientSharedQuotaRemaining,
   notifySharedQuotaStoreChange,
@@ -12,8 +13,8 @@ interface QuotaMirror {
   remaining: number;
 }
 
-export function getClientQuotaRemaining(): number {
-  return getClientSharedQuotaRemaining(FREE_DAILY_QUOTA);
+export function getClientQuotaRemaining(dailyLimit = FREE_DAILY_INTERPRET_QUOTA): number {
+  return getClientSharedQuotaRemaining(dailyLimit);
 }
 
 export function syncQuotaRemaining(remaining: number) {
