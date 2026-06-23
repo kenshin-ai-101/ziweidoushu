@@ -6,6 +6,8 @@ export interface BirthInfo {
   gender: 'male' | 'female';
   /** URL u=1 / 表单「时辰不详」时为 true，排盘按子时(0)起盘 */
   unknownTime?: boolean;
+  /** iztro 时辰序号 0~12；23:00 晚子时为 12 */
+  timeIndex?: number;
   name?: string;
   province?: string;   // 出生省份
   city?: string;       // 出生城市

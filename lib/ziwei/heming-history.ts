@@ -3,6 +3,13 @@ import type { BirthFormState } from '@/components/BirthForm';
 const STORAGE_KEY = 'heming_history_v1';
 const MAX_ENTRIES = 10;
 
+export const HEMING_HISTORY_UPDATE_EVENT = 'ziwei-heming-history-update';
+
+function notifyHemingHistoryUpdate() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(HEMING_HISTORY_UPDATE_EVENT));
+}
+
 export interface HemingHistoryEntry {
   id: string;
   labelA: string;
@@ -58,6 +65,7 @@ export function saveHemingHistory(formA: BirthFormState, formB: BirthFormState) 
       ),
     ].slice(0, MAX_ENTRIES);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    notifyHemingHistoryUpdate();
   } catch {}
 }
 
@@ -66,6 +74,7 @@ export function removeHemingHistory(id: string) {
   try {
     const next = loadHemingHistory().filter(item => item.id !== id);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    notifyHemingHistoryUpdate();
   } catch {}
 }
 
@@ -73,5 +82,6 @@ export function clearHemingHistory() {
   if (typeof window === 'undefined') return;
   try {
     localStorage.removeItem(STORAGE_KEY);
+    notifyHemingHistoryUpdate();
   } catch {}
 }

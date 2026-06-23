@@ -555,6 +555,10 @@ body:has(.chart-page-root) {
 .insight-chat-pane .insight-chat-embedded {
   flex: 1;
   min-height: 0;
+  height: 100%;
+}
+.insight-chat-embedded.insight-chat-layout {
+  min-height: 280px;
 }
 .insight-flip-bar {
   display: flex;
@@ -1131,47 +1135,107 @@ body:has(.chart-page-root) {
   padding: 0 2px;
 }
 .insight-chat-messages {
-  flex-grow: 0;
-  flex-shrink: 0;
-  flex-basis: auto;
-  overflow: visible;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   padding: 0 0 12px;
 }
 .insight-chat-embedded .insight-chat-messages {
+  flex: 1 1 auto;
+  min-height: 0;
   max-height: none;
+  overflow-y: auto;
 }
 .insight-chat-layout {
   display: flex;
   flex: 1;
-  min-height: 320px;
+  min-height: 0;
   gap: 0;
   border-top: 0.5px solid var(--bdr);
+  overflow: hidden;
 }
 .insight-chat-sidebar {
-  width: 168px;
+  width: 220px;
   flex-shrink: 0;
   border-right: 0.5px solid var(--bdr);
-  padding: 12px 10px;
+  padding: 10px 8px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-0, #fafafa);
 }
-.insight-chat-new {
-  appearance: none;
-  border: none;
-  border-radius: 999px;
-  padding: 8px 12px;
+.insight-chat-history.chart-my-history {
+  margin-top: 0;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.insight-chat-sidebar .chart-my-history-head {
+  flex-shrink: 0;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.insight-chat-sidebar .chart-my-history-head > span {
   font-size: 12px;
-  font-weight: 600;
-  background: rgb(37, 99, 235);
-  color: #fff;
-  cursor: pointer;
+  letter-spacing: 0.12em;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.insight-chat-sidebar-empty {
+.insight-chat-sidebar .chart-my-history-divider {
+  flex: 1;
+  min-width: 12px;
+}
+.insight-chat-sidebar .chart-my-history-head > button {
   font-size: 11px;
-  color: var(--tx-3);
-  line-height: 1.5;
-  padding: 4px 2px;
+  padding: 3px 7px;
+  white-space: nowrap;
+}
+.insight-chat-sidebar .chart-my-history-note {
+  flex-shrink: 0;
+  margin: 0 0 8px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.insight-chat-history .chart-my-history-list {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
+.insight-chat-sidebar .chart-my-history-row {
+  gap: 6px;
+  padding: 8px 8px;
+  min-width: 0;
+}
+.insight-chat-sidebar .chart-my-history-icon {
+  width: 14px;
+  font-size: 12px;
+  text-align: center;
+}
+.insight-chat-sidebar .chart-my-history-label {
+  font-size: 12px;
+}
+.insight-chat-sidebar .chart-my-history-remove {
+  font-size: 14px;
+  margin-left: 2px;
+}
+.insight-chat-sidebar .chart-my-history-remove--placeholder {
+  visibility: hidden;
+  pointer-events: none;
+}
+.insight-chat-history .chart-my-history-row.is-active {
+  border-color: var(--ac-bdr, rgba(0, 0, 0, 0.18));
+  background: var(--bg-card, #fff);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ac, #888) 12%, transparent);
 }
 .insight-chat-main {
   flex: 1;
@@ -2001,8 +2065,7 @@ body:has(.chart-page-root) {
   animation: fade-up 0.26s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .chart-feedback-head,
-.chart-school-head,
-.chart-school-footer {
+.chart-school-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2056,8 +2119,12 @@ body:has(.chart-page-root) {
   line-height: 1.6;
 }
 .chart-feedback-modal textarea,
-.chart-feedback-modal input {
+.chart-feedback-modal input,
+.chart-feedback-drawer textarea,
+.chart-feedback-drawer input {
+  display: block;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
   border: 1px solid rgba(0,0,0,0.22);
   border-radius: 8px;
@@ -2068,8 +2135,13 @@ body:has(.chart-page-root) {
   font-size: 14px;
   outline: none;
 }
-.chart-feedback-modal input {
+.chart-feedback-modal input,
+.chart-feedback-drawer input {
   margin-top: 10px;
+}
+.chart-feedback-drawer textarea {
+  resize: vertical;
+  min-height: 120px;
 }
 .chart-feedback-actions {
   display: flex;
@@ -2163,13 +2235,11 @@ body:has(.chart-page-root) {
   background: rgba(0,0,0,0.08);
   color: var(--tx-0);
 }
-.chart-school-footer {
-  flex-shrink: 0;
-  border-top: 1px solid var(--bdr);
-  background: var(--bg-1);
-  padding: 12px 22px;
+.chart-right-drawer-footer.chart-school-footer {
+  gap: 10px;
+  border-top-color: var(--bdr-soft, #e5e7eb);
 }
-.chart-school-footer button {
+.chart-right-drawer-footer.chart-school-footer .chart-school-footer-reset {
   border: 1px solid var(--bdr-med);
   border-radius: 8px;
   background: transparent;
@@ -2178,13 +2248,16 @@ body:has(.chart-page-root) {
   font-size: 12px;
   cursor: pointer;
 }
-.chart-school-footer button:last-child {
+.chart-right-drawer-footer.chart-school-footer .chart-school-footer-done {
   border: none;
-  background: var(--tx-0);
+  border-radius: 8px;
+  background: var(--gold-2, #000);
   color: #fff;
   padding: 8px 18px;
   font-size: 13px;
   font-weight: 600;
+  letter-spacing: 0.05em;
+  cursor: pointer;
 }
 
 /* 生产命盘宫格中心区 */

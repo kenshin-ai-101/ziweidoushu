@@ -11,6 +11,7 @@ interface RightDrawerProps {
   width?: number;
   children: ReactNode;
   footer?: ReactNode;
+  footerClassName?: string;
 }
 
 export default function RightDrawer({
@@ -21,6 +22,7 @@ export default function RightDrawer({
   width = 440,
   children,
   footer,
+  footerClassName,
 }: RightDrawerProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -70,7 +72,11 @@ export default function RightDrawer({
         <div className={`chart-right-drawer-body${footer ? ' has-footer' : ''}`}>
           {children}
         </div>
-        {footer && <div className="chart-right-drawer-footer">{footer}</div>}
+        {footer && (
+          <div className={['chart-right-drawer-footer', footerClassName].filter(Boolean).join(' ')}>
+            {footer}
+          </div>
+        )}
       </aside>
     </>,
     document.body,

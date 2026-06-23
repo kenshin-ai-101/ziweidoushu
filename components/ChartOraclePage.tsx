@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import BirthForm, { type BirthFormState } from '@/components/BirthForm';
 import ChartBoard from '@/components/ChartBoard';
 import ChartTopbar from '@/components/ChartTopbar';
@@ -43,6 +43,7 @@ function getCurrentShichenBranch(): number {
 
 export function ChartOraclePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isLoggedIn, loading: authLoading, isPro } = useAuth();
   const { history, save: saveHistory, remove: removeHistory, clearAll: clearHistory } = useHistory();
   const [chart, setChart] = useState<ZiweiChart | null>(null);
@@ -54,6 +55,7 @@ export function ChartOraclePage() {
   const [wenmoConfig, setWenmoConfig] = useState<WenmoConfig>(DEFAULT_WENMO_CONFIG);
   const [schoolOpen, setSchoolOpen] = useState(false);
   const latestFormRef = useRef<BirthFormState | null>(null);
+  const initialUrlLoadRef = useRef(false);
 
   const [selectedPalace, setSelectedPalace] = useState<Palace | null>(null);
   const [selectedSiHua, setSelectedSiHua] = useState<SelectedSiHua | null>(null);
@@ -82,7 +84,6 @@ export function ChartOraclePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...info,
-          brightnessSchool: config.brightnessSchool,
           wenmoConfig: config,
         }),
       });
@@ -113,9 +114,23 @@ export function ChartOraclePage() {
     }
   }, [buildChartUrl, saveHistory]);
 
+  const openHistoryChart = useCallback((form: BirthFormState) => {
+    latestFormRef.current = form;
+    setSavedForm(form);
+    setGenerateError('');
+    initialUrlLoadRef.current = true;
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', buildChartUrl(form, wenmoConfig));
+    }
+    void loadChart(formToBirthInfo(form, { lateZishi: wenmoConfig.lateZishi }), form, wenmoConfig);
+  }, [buildChartUrl, loadChart, wenmoConfig]);
+
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
+    if (initialUrlLoadRef.current) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (!params.get('y')) return;
+    initialUrlLoadRef.current = true;
+
     const config = params.toString() ? searchParamsToWenmoConfig(params) : loadStoredWenmoConfig();
     setWenmoConfig(config);
     saveStoredWenmoConfig(config);
@@ -130,30 +145,28 @@ export function ChartOraclePage() {
     };
     latestFormRef.current = fullForm;
     setSavedForm(fullForm);
-    void loadChart(formToBirthInfo(fullForm), fullForm, config);
-  }, [loadChart]);
+    void loadChart(formToBirthInfo(fullForm, { lateZishi: config.lateZishi }), fullForm, config);
+  }, [searchParams, loadChart]);
 
   const handleFormSave = (form: BirthFormState) => {
     latestFormRef.current = form;
     setSavedForm(form);
-    if (form.year && form.month && form.day) {
-      const params = formToSearchParams(form);
-      if (typeof window !== 'undefined') {
-        for (const [key, value] of Object.entries(wenmoConfigToSearchParams(wenmoConfig))) {
-          params.set(key, value);
-        }
-        window.history.replaceState({}, '', `/chart?${params.toString()}`);
-      }
-    }
   };
 
   const handleSubmit = (info: BirthInfo) => {
-    void loadChart(info, latestFormRef.current ?? savedForm ?? undefined, wenmoConfig);
+    initialUrlLoadRef.current = true;
+    const form = latestFormRef.current ?? savedForm ?? undefined;
+    void loadChart(
+      form
+        ? formToBirthInfo(form, { lateZishi: wenmoConfig.lateZishi })
+        : info,
+      form,
+      wenmoConfig,
+    );
   };
 
   const handleSchoolConfigChange = (config: WenmoConfig) => {
     setWenmoConfig(config);
-    saveStoredWenmoConfig(config);
     if (typeof window !== 'undefined' && savedForm) {
       window.history.replaceState({}, '', buildChartUrl(savedForm, config));
     }
@@ -167,6 +180,7 @@ export function ChartOraclePage() {
     setGenerateError('');
     setGenerating(false);
     setFormKey(k => k + 1);
+    initialUrlLoadRef.current = false;
     if (typeof window !== 'undefined') {
       window.history.replaceState({}, '', '/chart');
     }
@@ -236,7 +250,7 @@ export function ChartOraclePage() {
           onChange={config => {
             handleSchoolConfigChange(config);
             if (savedForm) {
-              void loadChart(formToBirthInfo(savedForm), savedForm, config);
+              void loadChart(formToBirthInfo(savedForm, { lateZishi: config.lateZishi }), savedForm, config);
             }
           }}
         />
@@ -391,6 +405,7 @@ export function ChartOraclePage() {
             history={history}
             remove={removeHistory}
             clearAll={clearHistory}
+            onOpen={openHistoryChart}
           />
         )}
 

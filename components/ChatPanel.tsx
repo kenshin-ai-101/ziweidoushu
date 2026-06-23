@@ -17,9 +17,19 @@ import {
   type InterpretMessage,
 } from '@/lib/ziwei/interpret-client';
 import { useQuotaRemaining } from '@/hooks/use-quota-remaining';
+import { useAuth } from '@/hooks/use-auth';
 import {
   syncQuotaRemaining,
 } from '@/lib/ziwei/quota-client';
+import {
+  buildSessionFromMessages,
+  clearAiChatSessions,
+  createAiChatSession,
+  deleteAiChatSession,
+  loadAiChatSessions,
+  saveAiChatSession,
+  type AiChatSession,
+} from '@/lib/ziwei/ai-chat-history';
 
 interface Message {
   id: string;
@@ -56,22 +66,111 @@ function toApiMessages(messages: Message[]): InterpretMessage[] {
   return messages.map(msg => ({ role: msg.role, content: msg.content }));
 }
 
+function toStoredMessages(messages: Message[]) {
+  return messages.map(msg => ({ role: msg.role, content: msg.content }));
+}
+
+function fromStoredMessages(messages: { role: 'user' | 'assistant'; content: string }[]): Message[] {
+  return messages.map(msg => ({
+    id: nextMessageId(),
+    role: msg.role,
+    content: msg.content,
+  }));
+}
+
 const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatPanel(
   { chart, embedded },
   ref,
 ) {
+  const { user, isLoggedIn, loading: authLoading } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sessions, setSessions] = useState<AiChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const quotaRemaining = useQuotaRemaining();
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<Message[]>([]);
   const loadingRef = useRef(false);
   const scrollRafRef = useRef<number | null>(null);
+  const activeSessionIdRef = useRef<string | null>(null);
   const chartToken = getChartToken(chart);
+  const userKey = user?.userId || 'anon';
 
   messagesRef.current = messages;
   loadingRef.current = loading;
+  activeSessionIdRef.current = activeSessionId;
+
+  const persistSession = useCallback((sessionId: string, nextMessages: Message[]) => {
+    if (!isLoggedIn) return;
+    const stored = buildSessionFromMessages(sessionId, toStoredMessages(nextMessages));
+    const nextSessions = saveAiChatSession(userKey, chartToken, stored);
+    setSessions(nextSessions);
+  }, [chartToken, isLoggedIn, userKey]);
+
+  const activateSession = useCallback((session: AiChatSession) => {
+    activeSessionIdRef.current = session.id;
+    setActiveSessionId(session.id);
+    const restored = fromStoredMessages(session.messages);
+    messagesRef.current = restored;
+    setMessages(restored);
+  }, []);
+
+  const startNewSession = useCallback(() => {
+    const session = createAiChatSession();
+    activeSessionIdRef.current = session.id;
+    setActiveSessionId(session.id);
+    messagesRef.current = [];
+    setMessages([]);
+    if (isLoggedIn) {
+      setSessions(prev => [session, ...prev.filter(item => item.id !== session.id)].slice(0, 20));
+    }
+  }, [isLoggedIn]);
+
+  const savedSessions = sessions.filter(item => item.messages.length > 0);
+  const isNewSessionActive = Boolean(
+    activeSessionId && !savedSessions.some(item => item.id === activeSessionId),
+  );
+
+  const removeSession = useCallback((sessionId: string) => {
+    if (!isLoggedIn) return;
+    const next = deleteAiChatSession(userKey, chartToken, sessionId);
+    setSessions(next);
+    if (activeSessionIdRef.current === sessionId) {
+      if (next.length > 0) {
+        activateSession(next[0]);
+      } else {
+        startNewSession();
+      }
+    }
+  }, [activateSession, chartToken, isLoggedIn, startNewSession, userKey]);
+
+  const clearAllSessions = useCallback(() => {
+    if (!savedSessions.length) return;
+    if (!confirm('清空全部对话记录？\n\n此操作不可撤销。')) return;
+    clearAiChatSessions(userKey, chartToken);
+    setSessions([]);
+    startNewSession();
+  }, [chartToken, savedSessions.length, startNewSession, userKey]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isLoggedIn) {
+      setSessions([]);
+      setActiveSessionId(null);
+      messagesRef.current = [];
+      setMessages([]);
+      return;
+    }
+
+    const loaded = loadAiChatSessions(userKey, chartToken);
+    setSessions(loaded);
+    if (loaded.length > 0) {
+      activateSession(loaded[0]);
+    } else {
+      startNewSession();
+    }
+  }, [activateSession, authLoading, chartToken, isLoggedIn, startNewSession, userKey]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     if (!scrollRef.current) return;
@@ -171,8 +270,12 @@ const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatPanel
       loadingRef.current = false;
       setLoading(false);
       scheduleScrollToBottom();
+      const sessionId = activeSessionIdRef.current;
+      if (sessionId) {
+        persistSession(sessionId, messagesRef.current);
+      }
     }
-  }, [chart, chartToken, scheduleScrollToBottom]);
+  }, [chart, chartToken, persistSession, scheduleScrollToBottom]);
 
   useImperativeHandle(ref, () => ({ sendMessage }), [sendMessage]);
 
@@ -253,18 +356,78 @@ const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatPanel
     <div className={embedded ? 'insight-chat-embedded insight-chat-layout' : 'flex flex-col h-full rounded-xl overflow-hidden card-glass'}>
       {embedded ? (
         <aside className="insight-chat-sidebar">
-          <button
-            type="button"
-            className="insight-chat-new"
-            onClick={() => {
-              messagesRef.current = [];
-              setMessages([]);
-            }}
-            disabled={loading}
-          >
-            + 新对话
-          </button>
-          <p className="insight-chat-sidebar-empty">历史对话将显示在这里</p>
+          <section className="chart-my-history insight-chat-history" aria-label="对话历史">
+            <div className="chart-my-history-head">
+              <span>对话历史</span>
+              <div className="chart-my-history-divider" aria-hidden />
+              <button
+                type="button"
+                onClick={clearAllSessions}
+                disabled={loading || savedSessions.length === 0}
+              >
+                清空全部
+              </button>
+            </div>
+
+            <p className="chart-my-history-note">
+              {isLoggedIn ? '※ 本机保存' : '※ 登录后保存'}
+            </p>
+
+            {isLoggedIn && (
+              <div className="chart-my-history-list">
+                <div
+                  className={`chart-my-history-row${isNewSessionActive ? ' is-active' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="开始新对话"
+                  onClick={() => !loading && startNewSession()}
+                  onKeyDown={event => {
+                    if (loading) return;
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      startNewSession();
+                    }
+                  }}
+                >
+                  <span className="chart-my-history-icon" aria-hidden>+</span>
+                  <span className="chart-my-history-label">新对话</span>
+                  <span className="chart-my-history-remove chart-my-history-remove--placeholder" aria-hidden>×</span>
+                </div>
+
+                {savedSessions.map(item => (
+                  <div
+                    key={item.id}
+                    className={`chart-my-history-row${activeSessionId === item.id ? ' is-active' : ''}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="载入此历史对话"
+                    onClick={() => !loading && activateSession(item)}
+                    onKeyDown={event => {
+                      if (loading) return;
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        activateSession(item);
+                      }
+                    }}
+                  >
+                    <span className="chart-my-history-icon" aria-hidden>✦</span>
+                    <span className="chart-my-history-label">{item.label}</span>
+                    <button
+                      type="button"
+                      className="chart-my-history-remove"
+                      aria-label="删除"
+                      onClick={event => {
+                        event.stopPropagation();
+                        if (confirm('确定删除这条记录吗？')) removeSession(item.id);
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </aside>
       ) : null}
 

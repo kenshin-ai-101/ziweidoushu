@@ -67,6 +67,7 @@ const clockIcon = (
 
 function HistoryDrawerButton() {
   const [open, setOpen] = useState(false);
+  const [panelKey, setPanelKey] = useState(0);
 
   return (
     <>
@@ -75,6 +76,7 @@ function HistoryDrawerButton() {
         className="chart-topbar-toolbtn"
         title="查看我的历史记录(命盘 / 合盘 / AI 对话)"
         onClick={event => {
+          setPanelKey(key => key + 1);
           setOpen(true);
           event.currentTarget.blur();
         }}
@@ -83,7 +85,7 @@ function HistoryDrawerButton() {
         历史
       </button>
       <RightDrawer open={open} onClose={() => setOpen(false)} title="历史记录" width={520}>
-        <HistoryPanel embedded />
+        <HistoryPanel key={panelKey} embedded active={open} />
       </RightDrawer>
     </>
   );

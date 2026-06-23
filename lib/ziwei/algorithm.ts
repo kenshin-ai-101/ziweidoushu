@@ -63,16 +63,48 @@ function parseWuxingJu(name: string): number {
   return 3;
 }
 
-import { computeBirthPillarsJieQi, computeBirthPillarsNonJieQi } from './chart-view';
+import { DEFAULT_WENMO_CONFIG, normalizeWenmoConfig, type WenmoConfig } from './school-config';
+import { runWithIztroConfigSync } from './wenmo/iztro-runtime';
+import { computeBirthPillarsForWenmo } from './wenmo/birth-pillars';
+import { applyResolvedBirthInfo, resolveChartParams } from './wenmo/params';
+import { applyWenmoPostProcess } from './wenmo/post-process';
+
+export interface GenerateChartOptions {
+  wenmoConfig?: WenmoConfig;
+}
 
 // ─── 主函数：生成命盘 ────────────────────────────────────────────
-export function generateChart(birthInfo: BirthInfo): ZiweiChart {
-  const { year, month, day, hour, gender } = birthInfo;
+export function generateChart(birthInfo: BirthInfo, options?: GenerateChartOptions): ZiweiChart {
+  const wenmoConfig = normalizeWenmoConfig(options?.wenmoConfig ?? DEFAULT_WENMO_CONFIG);
+  const { gender } = birthInfo;
 
-  // 调用 iztro 排盘
-  const solarDate = `${year}-${month}-${day}`;
-  const iztroGender = gender === 'male' ? '男' : '女';
-  const astrolabe = astro.bySolar(solarDate, hour, iztroGender, true, 'zh-CN');
+  return runWithIztroConfigSync(wenmoConfig, () => {
+    const params = resolveChartParams(birthInfo, wenmoConfig);
+    const iztroGender = gender === 'male' ? '男' : '女';
+    const astrolabe = astro.bySolar(
+      params.solarDate,
+      params.timeIndex,
+      iztroGender,
+      params.fixLeap,
+      'zh-CN',
+    );
+
+    const resolvedBirth = applyResolvedBirthInfo(birthInfo, params);
+    const chart = buildChartFromAstrolabe(astrolabe, resolvedBirth, wenmoConfig);
+    const processed = applyWenmoPostProcess(chart, wenmoConfig, params);
+    return {
+      ...processed,
+      _chartToken: computeChartToken(processed),
+    };
+  });
+}
+
+function buildChartFromAstrolabe(
+  astrolabe: ReturnType<typeof astro.bySolar>,
+  birthInfo: BirthInfo,
+  wenmoConfig: WenmoConfig,
+): ZiweiChart {
+  const { year, month, day, hour, gender } = birthInfo;
 
   // ── 组装十二宫 ──
   const palaces: Palace[] = astrolabe.palaces.map(p => {
@@ -169,11 +201,13 @@ export function generateChart(birthInfo: BirthInfo): ZiweiChart {
   // ── 农历信息 ──
   const lunarInfo = getLunarInfo(year, month, day);
 
+  const { birthPillars, birthPillarsNonJieQi } = computeBirthPillarsForWenmo(birthInfo, wenmoConfig);
+
   const chartBase = {
     birthInfo,
     lunarInfo,
-    birthPillars: computeBirthPillarsJieQi(year, month, day, hour),
-    birthPillarsNonJieQi: computeBirthPillarsNonJieQi(year, month, day, hour),
+    birthPillars,
+    birthPillarsNonJieQi,
     mingGongBranch: mingGongBranch >= 0 ? mingGongBranch : 0,
     shenGongBranch: shenGongBranch >= 0 ? shenGongBranch : 0,
     wuxingJu,

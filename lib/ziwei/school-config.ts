@@ -163,3 +163,10 @@ export function saveStoredWenmoConfig(config: WenmoConfig) {
     localStorage.setItem(WENMO_STORAGE_KEY, JSON.stringify(config));
   } catch {}
 }
+
+export function clearStoredWenmoConfig() {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(WENMO_STORAGE_KEY);
+  } catch {}
+}

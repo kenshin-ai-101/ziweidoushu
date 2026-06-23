@@ -10,6 +10,7 @@
     "build:cf": "npx @cloudflare/next-on-pages",
     "preview:cf": "npx wrangler pages dev",
     "smoke:chart": "node scripts/smoke-chart-flow.mjs",
+    "smoke:wenmo": "node scripts/smoke-wenmo.mjs",
     "smoke:heming": "node scripts/smoke-heming-flow.mjs",
     "prepare": "husky"
   },

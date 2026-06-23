@@ -6,6 +6,7 @@ import {
   DEFAULT_WENMO_CONFIG,
   WENMO_GROUP_LABELS,
   WENMO_GROUP_OPTIONS,
+  clearStoredWenmoConfig,
   loadStoredWenmoConfig,
   saveStoredWenmoConfig,
   type WenmoConfig,
@@ -21,6 +22,7 @@ export default function WenmoSchoolDrawer({ open, onClose, onChange }: WenmoScho
   const [config, setConfig] = useState<WenmoConfig>(DEFAULT_WENMO_CONFIG);
 
   useEffect(() => {
+    if (!open) return;
     setConfig(loadStoredWenmoConfig());
   }, [open]);
 
@@ -32,8 +34,8 @@ export default function WenmoSchoolDrawer({ open, onClose, onChange }: WenmoScho
   };
 
   const reset = () => {
+    clearStoredWenmoConfig();
     setConfig(DEFAULT_WENMO_CONFIG);
-    saveStoredWenmoConfig(DEFAULT_WENMO_CONFIG);
     onChange?.(DEFAULT_WENMO_CONFIG);
   };
 
@@ -44,10 +46,15 @@ export default function WenmoSchoolDrawer({ open, onClose, onChange }: WenmoScho
       title="✦ 排盘流派切换"
       subtitle="默认对齐文墨流派 · 已 20 例验证一致"
       width={440}
+      footerClassName="chart-school-footer"
       footer={(
         <>
-          <button type="button" onClick={reset}>↺ 重置为默认</button>
-          <button type="button" onClick={onClose}>完成</button>
+          <button type="button" className="chart-school-footer-reset" onClick={reset}>
+            ↺ 重置为默认
+          </button>
+          <button type="button" className="chart-school-footer-done" onClick={onClose}>
+            完成
+          </button>
         </>
       )}
     >

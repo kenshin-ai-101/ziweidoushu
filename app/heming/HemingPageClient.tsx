@@ -10,6 +10,7 @@ import {
 } from '@/lib/ziwei/heming-quota-client';
 import { useHemingQuotaRemaining } from '@/hooks/use-quota-remaining';
 import { formToBirthInfo } from '@/lib/ziwei/share';
+import { saveHemingHistory } from '@/lib/ziwei/heming-history';
 import { generateChart as buildChart } from '@/lib/ziwei/algorithm';
 import type { BirthInfo, ZiweiChart } from '@/lib/ziwei/types';
 
@@ -181,31 +182,55 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
       const decoder = new TextDecoder();
       let text = '';
       let buffer = '';
+      let doneStreaming = false;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6);
-          if (data === '[DONE]') break;
-          try {
-            const delta = JSON.parse(data).delta?.text ?? '';
-            text += delta;
-            if (isFollowUp) {
-              setChatMessages(items => {
-                const next = [...items];
-                if (next.length > 0) next[next.length - 1] = { role: 'assistant', content: text };
-                return next;
-              });
-            } else {
-              setAnalysis(text);
-            }
-          } catch { /* skip */ }
+      const appendDelta = (delta: string) => {
+        if (!delta) return;
+        text += delta;
+        if (isFollowUp) {
+          setChatMessages(items => {
+            const next = [...items];
+            if (next.length > 0) next[next.length - 1] = { role: 'assistant', content: text };
+            return next;
+          });
+        } else {
+          setAnalysis(text);
         }
+      };
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              doneStreaming = true;
+              continue;
+            }
+            try {
+              appendDelta(JSON.parse(data).delta?.text ?? '');
+            } catch { /* skip */ }
+          }
+          if (doneStreaming) break;
+        }
+
+        if (buffer.startsWith('data: ')) {
+          const data = buffer.slice(6).trim();
+          if (data && data !== '[DONE]') {
+            try {
+              appendDelta(JSON.parse(data).delta?.text ?? '');
+            } catch { /* skip */ }
+          }
+        }
+      } finally {
+        try {
+          reader.releaseLock();
+        } catch { /* skip */ }
       }
 
       const nextMessages: HemingMessage[] = isFollowUp
@@ -215,6 +240,9 @@ export default function HemingPageClient({ serverQuotaRemaining }: { serverQuota
             { role: 'assistant', content: text },
           ];
       setChatMessages(nextMessages);
+      if (!isFollowUp && text.trim() && formA && formB) {
+        saveHemingHistory(formA, formB);
+      }
       setTimeout(() => analysisRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     } catch {
       if (isFollowUp) setChatMessages(items => items.slice(0, -2));

@@ -1,17 +1,16 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import type { BirthFormState } from '@/components/BirthForm';
 import type { HistoryEntry } from '@/lib/ziwei/history';
-import { formToSearchParams } from '@/lib/ziwei/share';
 
 interface ChartMyHistoryProps {
   history: HistoryEntry[];
   remove: (id: string) => void;
   clearAll: () => void;
+  onOpen: (form: BirthFormState) => void;
 }
 
-export default function ChartMyHistory({ history, remove, clearAll }: ChartMyHistoryProps) {
-  const router = useRouter();
+export default function ChartMyHistory({ history, remove, clearAll, onOpen }: ChartMyHistoryProps) {
 
   const handleClearAll = () => {
     if (!history.length) return;
@@ -20,7 +19,7 @@ export default function ChartMyHistory({ history, remove, clearAll }: ChartMyHis
   };
 
   const openChart = (item: HistoryEntry) => {
-    router.push(`/chart?${formToSearchParams(item.form).toString()}`);
+    onOpen(item.form);
   };
 
   return (

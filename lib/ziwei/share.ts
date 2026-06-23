@@ -1,5 +1,6 @@
 import type { BirthFormState } from '@/components/BirthForm';
 import type { BirthInfo } from './types';
+import type { WenmoConfig } from '@/lib/ziwei/school-config';
 import { Lunar } from 'lunar-javascript';
 
 /** 农历年月日 → 公历（闰月 month 传正数 + isLeapMonth=true） */
@@ -35,7 +36,10 @@ export function calcTrueSolarBranch(clockHour: number, clockMinute: number, long
  * · 00:00-00:59 = 早子时，按本日排盘
  * 这与「时辰支同为子(0)」并不冲突——子时分早晚两段，需要在日期上区分。
  */
-export function formToBirthInfo(form: BirthFormState): BirthInfo {
+export function formToBirthInfo(
+  form: BirthFormState,
+  options?: Pick<WenmoConfig, 'lateZishi'>,
+): BirthInfo {
   let y = parseInt(form.year) || 0;
   let m = parseInt(form.month) || 0;
   let d = parseInt(form.day) || 0;
@@ -47,23 +51,35 @@ export function formToBirthInfo(form: BirthFormState): BirthInfo {
     d = solar.day;
   }
 
-  // 晚子时（23:00-23:59）按次日处理：用 Date 对象自动处理月末/年末进位
+  const lateZishi = options?.lateZishi ?? 'next-day';
+  let timeIndex: number | undefined;
+
   if (!form.unknownTime) {
     const clockHour = parseInt(form.clockHour) || 0;
+    const treatLateAsCurrentDay = lateZishi === 'current-day'
+      || lateZishi === 'all-current'
+      || lateZishi === 'day-cur-time-next';
+
     if (clockHour === 23 && y > 0 && m > 0 && d > 0) {
-      const next = new Date(y, m - 1, d + 1);
-      y = next.getFullYear();
-      m = next.getMonth() + 1;
-      d = next.getDate();
+      if (treatLateAsCurrentDay) {
+        timeIndex = 12;
+      } else {
+        const next = new Date(y, m - 1, d + 1);
+        y = next.getFullYear();
+        m = next.getMonth() + 1;
+        d = next.getDate();
+      }
     }
   }
 
   const hour = form.unknownTime
     ? 0
     : calcTrueSolarBranch(parseInt(form.clockHour) || 0, parseInt(form.clockMinute) || 0, form.longitude);
+
   return {
     year: y, month: m, day: d,
     hour,
+    timeIndex,
     gender: form.gender,
     unknownTime: form.unknownTime || undefined,
     name: form.name || undefined,

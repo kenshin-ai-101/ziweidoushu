@@ -1,27 +1,26 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useHistory } from '@/lib/ziwei/history';
 import { formToSearchParams } from '@/lib/ziwei/share';
 import {
   clearHemingHistory,
+  HEMING_HISTORY_UPDATE_EVENT,
   loadHemingHistory,
   removeHemingHistory,
   type HemingHistoryEntry,
 } from '@/lib/ziwei/heming-history';
+import {
+  clearAllAiChatEntries,
+  deleteAiChatEntry,
+  listAllAiChatEntries,
+  type AiChatHistoryEntry,
+} from '@/lib/ziwei/ai-chat-history';
 
 type TabKey = 'chart' | 'heming' | 'aichat';
-
-interface AiChatEntry {
-  chartToken: string;
-  messages: { role: string; content: string }[];
-  messageCount: number;
-  preview: string;
-  lastUpdated: number;
-}
 
 function actionBtn(variant: 'default' | 'danger' = 'default') {
   return {
@@ -97,63 +96,62 @@ function EmptyState({ text, cta, link }: { text: string; cta: string; link: stri
   );
 }
 
-export default function HistoryPanel({ embedded = false }: { embedded?: boolean }) {
+export default function HistoryPanel({
+  embedded = false,
+  active = true,
+}: {
+  embedded?: boolean;
+  active?: boolean;
+}) {
   const router = useRouter();
   const { user, isLoggedIn, loading } = useAuth();
   const { history, remove, clearAll } = useHistory();
   const [tab, setTab] = useState<TabKey>('chart');
   const [search, setSearch] = useState('');
   const [hemingHistory, setHemingHistory] = useState<HemingHistoryEntry[]>([]);
-  const [aiChats, setAiChats] = useState<AiChatEntry[]>([]);
+  const [aiChats, setAiChats] = useState<AiChatHistoryEntry[]>([]);
   const [activeChatToken, setActiveChatToken] = useState<string | null>(null);
 
   const userKey = user?.userId || 'anon';
 
-  useEffect(() => {
+  const reloadLocalHistory = useCallback(() => {
     setHemingHistory(loadHemingHistory());
-  }, []);
+    if (typeof window !== 'undefined') {
+      setAiChats(listAllAiChatEntries(userKey));
+    }
+  }, [userKey]);
 
   useEffect(() => {
     if (loading) return;
-    const prefix = `ai_chat_${userKey}_`;
-    const sessionsPrefix = `ai_sessions_${userKey}_`;
-    const next: AiChatEntry[] = [];
+    reloadLocalHistory();
+  }, [loading, reloadLocalHistory]);
 
-    for (let i = 0; i < localStorage.length; i += 1) {
-      const key = localStorage.key(i);
-      if (!key || !key.startsWith(prefix)) continue;
-      const chartToken = key.slice(prefix.length);
-      try {
-        const raw = localStorage.getItem(key);
-        if (!raw) continue;
-        const parsed = JSON.parse(raw) as { messages?: { role: string; content: string }[]; updatedAt?: number; label?: string } | { role: string; content: string }[];
-        const messages = Array.isArray(parsed) ? parsed : parsed.messages;
-        if (!Array.isArray(messages) || messages.length === 0) continue;
-        const lastUpdated = Array.isArray(parsed)
-          ? 0
-          : typeof parsed.updatedAt === 'number'
-            ? parsed.updatedAt
-            : 0;
-        const firstUser = messages.find(item => item.role === 'user');
-        const preview = !Array.isArray(parsed) && typeof parsed.label === 'string' && parsed.label.trim()
-          ? parsed.label
-          : firstUser
-            ? String(firstUser.content).slice(0, 40)
-            : '(无用户消息)';
-        next.push({
-          chartToken,
-          messages,
-          messageCount: messages.length,
-          preview,
-          lastUpdated,
-        });
-      } catch {}
-    }
+  useEffect(() => {
+    if (!active || loading) return;
+    reloadLocalHistory();
+  }, [active, loading, reloadLocalHistory]);
 
-    next.sort((a, b) => b.lastUpdated - a.lastUpdated);
-    setAiChats(next);
-    void sessionsPrefix;
-  }, [userKey, loading]);
+  useEffect(() => {
+    if (tab !== 'heming' || !active || loading) return;
+    setHemingHistory(loadHemingHistory());
+  }, [tab, active, loading]);
+
+  useEffect(() => {
+    const refreshHeming = () => setHemingHistory(loadHemingHistory());
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === 'heming_history_v1' || event.key === null) {
+        refreshHeming();
+      }
+    };
+    window.addEventListener(HEMING_HISTORY_UPDATE_EVENT, refreshHeming);
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', refreshHeming);
+    return () => {
+      window.removeEventListener(HEMING_HISTORY_UPDATE_EVENT, refreshHeming);
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', refreshHeming);
+    };
+  }, []);
 
   const filteredCharts = useMemo(() => {
     if (!search) return history;
@@ -224,16 +222,7 @@ export default function HistoryPanel({ embedded = false }: { embedded?: boolean 
       clearHemingHistory();
       setHemingHistory([]);
     } else {
-      const chatPrefix = `ai_chat_${userKey}_`;
-      const sessionPrefix = `ai_sessions_${userKey}_`;
-      const keys: string[] = [];
-      for (let i = 0; i < localStorage.length; i += 1) {
-        const key = localStorage.key(i);
-        if (key && (key.startsWith(chatPrefix) || key.startsWith(sessionPrefix))) {
-          keys.push(key);
-        }
-      }
-      keys.forEach(key => localStorage.removeItem(key));
+      clearAllAiChatEntries(userKey);
       setAiChats([]);
       setActiveChatToken(null);
     }
@@ -346,12 +335,9 @@ export default function HistoryPanel({ embedded = false }: { embedded?: boolean 
                 subtitle={`共 ${item.messageCount} 条消息`}
                 onOpen={() => setActiveChatToken(item.chartToken)}
                 onDelete={() => {
-                  try {
-                    localStorage.removeItem(`ai_chat_${userKey}_${item.chartToken}`);
-                    localStorage.removeItem(`ai_sessions_${userKey}_${item.chartToken}`);
-                    setAiChats(prev => prev.filter(chat => chat.chartToken !== item.chartToken));
-                    if (activeChatToken === item.chartToken) setActiveChatToken(null);
-                  } catch {}
+                  deleteAiChatEntry(userKey, item.chartToken);
+                  setAiChats(prev => prev.filter(chat => chat.chartToken !== item.chartToken));
+                  if (activeChatToken === item.chartToken) setActiveChatToken(null);
                 }}
               />
             ))
