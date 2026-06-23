@@ -77,13 +77,14 @@ export function MembershipEditionButton({
         marginLeft: 'clamp(4px, 0.6vw, 8px)',
         background: isPro ? '#1a1a1a' : '#fff',
         color: isPro ? '#d4a843' : '#1a1a1a',
+        borderWidth: '1px',
+        borderStyle: 'solid',
         borderColor: isPro ? '#d4a843' : 'rgba(0,0,0,0.28)',
         fontWeight: isPro ? 700 : 500,
         textDecoration: 'none',
         display: 'inline-flex',
         alignItems: 'center',
         borderRadius: 999,
-        border: '1px solid',
       }}
     >
       {label}
