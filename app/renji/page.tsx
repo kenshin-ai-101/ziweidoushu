@@ -22,7 +22,7 @@ export default function Page() {
           <SectionTitle index="02" title="学习路线" subtitle="倪师指定的学习顺序" />
           <div className="oracle-learning-route">
             {RENJI_STATS.learningOrder.map((name, index) => (
-              <Fragment key={name}>
+              <Fragment key={index}>
                 {index > 0 && <span className="oracle-learning-route-arrow">→</span>}
                 <div className="oracle-learning-route-pill">
                   <span>{String(index + 1).padStart(2, '0')}</span>
