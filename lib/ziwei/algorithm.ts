@@ -38,10 +38,19 @@ function mapBrightness(b?: string): 'bright' | 'normal' | 'dim' {
 
 // ─── 星曜类型映射 ────────────────────────────────────────────────
 const SHA_STARS = new Set(['擎羊', '陀罗', '火星', '铃星', '地空', '地劫',
-  '天空', '旬空', '截路', '大耗', '天使', '天伤']);
+  '天空', '旬空', '截路', '空亡', '大耗', '天使', '天伤', '灾煞', '天煞', '月煞', '亡神',
+  '阴煞', '天月', '天哭', '天虚', '蜚廉', '寡宿', '孤辰', '天刑']);
 const LUCKY_STARS = new Set(['文昌', '文曲', '左辅', '右弼', '天魁', '天钺',
   '禄存', '天马', '天官', '天福', '天才', '天寿', '三台', '八座', '恩光',
-  '天贵', '台辅', '龙池', '凤阁', '红鸾', '天喜', '孤辰', '寡宿']);
+  '天贵', '台辅', '龙池', '凤阁', '红鸾', '天喜', '解神', '年解', '华盖',
+  '月德', '天德', '天巫', '封诰']);
+const FLOWER_LUCKY = new Set(['红鸾', '天喜']);
+
+/** 生产命盘网格不展示的岁前/将前十二神（iztro 有值但文墨盘面省略） */
+const YEARLY_GRID_EXCLUDED = new Set([
+  '岁建', '晦气', '丧门', '贯索', '官符', '小耗', '大耗', '吊客', '病符',
+  '将星', '攀鞍', '岁驿', '息神', '指背', '月煞', '亡神', '灾煞', '天煞', '白虎',
+]);
 
 function mapStarType(starName: string, iztroType: string): Star['type'] {
   if (SHA_STARS.has(starName)) return 'sha';
@@ -50,6 +59,7 @@ function mapStarType(starName: string, iztroType: string): Star['type'] {
   if (t === '主星' || t === 'major') return 'major';
   if (t === '煞星' || t === 'tough') return 'sha';
   if (t === '吉星' || t === 'soft' || t === '禄存' || t === '天马') return 'lucky';
+  if (t === 'flower') return FLOWER_LUCKY.has(starName) ? 'lucky' : 'minor';
   return 'minor';
 }
 
@@ -63,11 +73,17 @@ function parseWuxingJu(name: string): number {
   return 3;
 }
 
-import { DEFAULT_WENMO_CONFIG, normalizeWenmoConfig, type WenmoConfig } from './school-config';
+import {
+  DEFAULT_WENMO_CONFIG,
+  isDefaultWenmoConfig,
+  normalizeWenmoConfig,
+  type WenmoConfig,
+} from './school-config';
 import { runWithIztroConfigSync } from './wenmo/iztro-runtime';
 import { computeBirthPillarsForWenmo } from './wenmo/birth-pillars';
 import { applyResolvedBirthInfo, resolveChartParams } from './wenmo/params';
 import { applyWenmoPostProcess } from './wenmo/post-process';
+import { applyGridBrightness } from './grid-brightness';
 
 export interface GenerateChartOptions {
   wenmoConfig?: WenmoConfig;
@@ -91,12 +107,24 @@ export function generateChart(birthInfo: BirthInfo, options?: GenerateChartOptio
 
     const resolvedBirth = applyResolvedBirthInfo(birthInfo, params);
     const chart = buildChartFromAstrolabe(astrolabe, resolvedBirth, wenmoConfig);
-    const processed = applyWenmoPostProcess(chart, wenmoConfig, params);
+    const processed = isDefaultWenmoConfig(wenmoConfig)
+      ? chart
+      : applyWenmoPostProcess(chart, wenmoConfig, params);
+    applyGridBrightness(processed.palaces);
     return {
       ...processed,
       _chartToken: computeChartToken(processed),
     };
   });
+}
+
+function appendYearlyDecorStars(stars: Star[], names: Array<string | undefined>) {
+  const existing = new Set(stars.map(s => s.name));
+  for (const name of names) {
+    if (!name || existing.has(name) || YEARLY_GRID_EXCLUDED.has(name)) continue;
+    stars.push({ name, type: mapStarType(name, '') });
+    existing.add(name);
+  }
 }
 
 function buildChartFromAstrolabe(
@@ -118,19 +146,24 @@ function buildChartFromAstrolabe(
         type:       'major' as const,
         brightness: mapBrightness(s.brightness as string),
         brightnessLabel: s.brightness as string,
+        brightnessRaw: s.brightness as string,
         siHua:      s.mutagen as Star['siHua'],
       })),
       ...(p.minorStars ?? []).map(s => ({
         name:  s.name as string,
         type:  mapStarType(s.name as string, s.type as string),
+        brightness: mapBrightness(s.brightness as string),
+        brightnessLabel: (s.brightness as string) || undefined,
+        brightnessRaw: (s.brightness as string) || undefined,
         siHua: s.mutagen as Star['siHua'],
       })),
       ...(p.adjectiveStars ?? []).map(s => ({
         name:  s.name as string,
-        type:  'minor' as const,
+        type:  mapStarType(s.name as string, s.type as string),
         siHua: s.mutagen as Star['siHua'],
       })),
     ];
+    appendYearlyDecorStars(allStars, [p.jiangqian12 as string | undefined, p.suiqian12 as string | undefined]);
 
     const range = p.decadal?.range;
     return {

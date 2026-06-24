@@ -115,6 +115,13 @@ function isConfigKey(key: string): key is keyof WenmoConfig {
   return key in DEFAULT_WENMO_CONFIG;
 }
 
+/** 是否与生产默认排盘一致（未改流派参数） */
+export function isDefaultWenmoConfig(config: WenmoConfig): boolean {
+  return (Object.keys(DEFAULT_WENMO_CONFIG) as (keyof WenmoConfig)[]).every(
+    key => config[key] === DEFAULT_WENMO_CONFIG[key],
+  );
+}
+
 export function normalizeWenmoConfig(value: unknown): WenmoConfig {
   const next = { ...DEFAULT_WENMO_CONFIG };
   if (!value || typeof value !== 'object') return next;

@@ -30,7 +30,8 @@ export interface Star {
   type: 'major' | 'minor' | 'lucky' | 'sha';
   siHua?: SiHua;
   brightness?: 'bright' | 'normal' | 'dim';  // 庙旺利陷
-  brightnessLabel?: string;                  // 原始亮度字（庙/旺/利/陷/不/平）
+  brightnessLabel?: string;                  // 原始亮度字（庙/旺/利/陷/不/平/闲）
+  brightnessRaw?: string;                    // 与生产 API 对齐的亮度字段
 }
 
 export interface SelfSihuaMark {

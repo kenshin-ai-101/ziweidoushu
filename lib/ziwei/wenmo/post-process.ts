@@ -3,6 +3,7 @@ import type { Palace, Star, ZiweiChart } from '@/lib/ziwei/types';
 import type { WenmoConfig } from '@/lib/ziwei/school-config';
 import { BRANCHES, STEMS } from '@/lib/ziwei/constants';
 import { lookupMajorBrightness } from '@/lib/ziwei/wenmo/brightness';
+import { branchToYinIndex } from '@/lib/ziwei/grid-brightness';
 import type { ResolvedChartParams } from '@/lib/ziwei/wenmo/params';
 
 const CHANGSHENG_STARS = [
@@ -171,7 +172,7 @@ function applyBrightness(palaces: Palace[], school: WenmoConfig['brightnessSchoo
   for (const palace of palaces) {
     for (const star of palace.stars) {
       if (star.type !== 'major') continue;
-      const label = lookupMajorBrightness(school, star.name, palace.branch);
+      const label = lookupMajorBrightness(school, star.name, branchToYinIndex(palace.branch));
       if (!label) continue;
       star.brightnessLabel = label;
       star.brightness = label === '庙' || label === '旺'

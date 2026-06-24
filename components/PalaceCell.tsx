@@ -95,7 +95,7 @@ export default function PalaceCell({
         onClick={e => { e.stopPropagation(); onStarClick?.(star); }}
       >
         <span className="palace-star-name">{splitChars(star.name)}</span>
-        {star.type === 'major' && star.brightnessLabel && (
+        {star.brightnessLabel && (
           <span className="palace-star-brightness">{star.brightnessLabel}</span>
         )}
         {(star.siHua || overlaySiHua) && (
@@ -161,7 +161,7 @@ export default function PalaceCell({
       )}
 
       {/* 空宫提示（独立于星曜列，避免挤压布局） */}
-      {isEmptyPalace && (
+      {isEmptyPalace && shownStars.length === 0 && (
         <div className="palace-empty-label text-[10px] italic" style={{ color: 'var(--t-faint)', opacity: 0.6 }}>
           {emptyHint}
         </div>

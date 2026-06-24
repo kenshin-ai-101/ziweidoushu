@@ -12,7 +12,25 @@ const LABELS: Record<BrightnessKey, string> = {
   bu: '不',
 };
 
-/** 寅起十二宫，与 iztro STARS_INFO 一致（default / 混合亮度表） */
+/** 混合亮度表（default）：全书 + 文墨 8GDPB 交叉验证，与生产 API 一致 */
+const HYBRID_DEFAULT: Record<string, string[]> = {
+  七杀: ['庙', '陷', '庙', '平', '旺', '旺', '庙', '平', '庙', '平', '旺', '旺'],
+  天同: ['平', '庙', '旺', '庙', '陷', '陷', '旺', '平', '平', '庙', '旺', '陷'],
+  天府: ['庙', '平', '庙', '旺', '旺', '庙', '旺', '平', '庙', '旺', '旺', '庙'],
+  天机: ['旺', '旺', '旺', '平', '庙', '陷', '旺', '旺', '旺', '平', '庙', '陷'],
+  天梁: ['庙', '庙', '旺', '陷', '庙', '旺', '陷', '平', '旺', '陷', '庙', '旺'],
+  天相: ['庙', '陷', '旺', '平', '旺', '平', '庙', '陷', '陷', '平', '庙', '庙'],
+  太阳: ['旺', '庙', '旺', '旺', '庙', '旺', '平', '平', '陷', '陷', '陷', '陷'],
+  太阴: ['陷', '陷', '陷', '陷', '陷', '陷', '旺', '旺', '庙', '庙', '庙', '庙'],
+  巨门: ['庙', '旺', '陷', '庙', '旺', '陷', '庙', '旺', '陷', '庙', '旺', '陷'],
+  廉贞: ['庙', '闲', '旺', '陷', '平', '庙', '庙', '平', '旺', '陷', '平', '旺'],
+  武曲: ['平', '陷', '庙', '平', '旺', '庙', '平', '旺', '庙', '平', '旺', '庙'],
+  破军: ['陷', '旺', '旺', '平', '庙', '庙', '陷', '陷', '旺', '平', '庙', '庙'],
+  紫微: ['庙', '旺', '闲', '旺', '庙', '庙', '旺', '平', '陷', '旺', '闲', '庙'],
+  贪狼: ['平', '旺', '庙', '陷', '旺', '庙', '平', '旺', '庙', '陷', '旺', '庙'],
+};
+
+/** 寅起十二宫，与 iztro STARS_INFO 一致（流派覆盖基准） */
 const IZTRO_DEFAULT: Record<string, BrightnessKey[]> = {
   紫微: ['wang', 'wang', 'de', 'wang', 'miao', 'miao', 'wang', 'wang', 'de', 'wang', 'ping', 'miao'],
   天机: ['de', 'wang', 'li', 'ping', 'miao', 'xian', 'de', 'wang', 'li', 'ping', 'miao', 'xian'],
@@ -79,7 +97,7 @@ function toIztroBrightness(table: Record<string, BrightnessKey[]>) {
 }
 
 export function buildBrightnessConfig(school: WenmoConfig['brightnessSchool']) {
-  if (school === 'default') return undefined;
+  if (school === 'default') return { ...HYBRID_DEFAULT };
   return toIztroBrightness(SCHOOL_TABLES[school]);
 }
 
@@ -88,8 +106,10 @@ export function lookupMajorBrightness(
   starName: string,
   branchIndex: number,
 ): string | undefined {
-  const table = school === 'default' ? IZTRO_DEFAULT : SCHOOL_TABLES[school];
-  const row = table[starName];
+  if (school === 'default') {
+    return HYBRID_DEFAULT[starName]?.[branchIndex];
+  }
+  const row = SCHOOL_TABLES[school][starName];
   if (!row) return undefined;
   const key = row[branchIndex];
   return key ? LABELS[key] : undefined;
