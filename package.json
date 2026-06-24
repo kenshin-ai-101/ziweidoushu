@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev -p 3100",
     "dev:clean": "rm -rf .next && next dev -p 3100",
-    "build": "next build",
+    "build:grid-brightness": "node scripts/build-grid-brightness.mjs",
+    "build": "node scripts/build-grid-brightness.mjs && next build",
     "start": "next start",
     "build:cf": "npx @cloudflare/next-on-pages",
     "preview:cf": "npx wrangler pages dev",
