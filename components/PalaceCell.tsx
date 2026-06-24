@@ -75,21 +75,20 @@ export default function PalaceCell({
 
   const majorStars = stars.filter(s => s.type === 'major');
   const luckyStars = stars.filter(s => s.type === 'lucky');
-  const shaStars = stars.filter(s => s.type === 'sha');
-  const minorStars = stars.filter(s => s.type === 'minor');
   const isEmptyPalace = majorStars.length === 0;
-  const shownStars = [...majorStars, ...luckyStars, ...shaStars, ...minorStars];
+  /** 与生产盘面一致：保留 iztro 原始星曜顺序，不按类型重排 */
+  const shownStars = stars;
   const borrowedHint = isEmptyPalace && palace.borrowedStars?.length
     ? `借${palace.borrowedFromName?.replace(/宫$/, '') ?? '对'}·${palace.borrowedStars.join('')}`
     : '';
   const emptyHint = borrowedHint
     || (luckyStars.length > 0 ? '空宫· 吉星拱照' : '空宫');
 
-  const renderStar = (star: Star) => {
+  const renderStar = (star: Star, index: number) => {
     const overlaySiHua = overlayStarSiHua?.[star.name];
     return (
       <button
-        key={`${star.name}-${star.type}`}
+        key={`${star.name}-${index}`}
         type="button"
         className={clsx('palace-star-col', starTypeClass[star.type])}
         onClick={e => { e.stopPropagation(); onStarClick?.(star); }}

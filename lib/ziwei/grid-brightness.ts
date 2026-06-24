@@ -1,4 +1,6 @@
 import type { Palace, Star } from './types';
+import { lookupMajorBrightness } from './wenmo/brightness';
+import type { WenmoConfig } from './school-config';
 
 /** 地支索引（子=0）→ 寅起宫位索引（寅=0） */
 export function branchToYinIndex(branch: number): number {
@@ -29,20 +31,21 @@ export const GRID_AUX_BRIGHTNESS: Record<string, (string | undefined)[]> = {
   '天钺': [undefined, undefined, undefined, '庙', '庙', '旺', '庙', '庙', undefined, undefined, undefined, undefined],
   '天马': ['旺', undefined, undefined, '平', undefined, undefined, '旺', undefined, undefined, '平', undefined, undefined],
   '天魁': ['庙', '庙', undefined, undefined, undefined, undefined, undefined, undefined, undefined, '庙', '庙', '旺'],
-  '孤辰': ['平', undefined, undefined, '陷', undefined, undefined, '平', undefined, undefined, '陷', undefined, undefined],
+  '孤辰': ['平', undefined, undefined, '陷', undefined, undefined, '平', undefined, undefined, '陷', undefined, '陷'],
+  '劫煞': [undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, '陷'],
   '寡宿': [undefined, undefined, '陷', undefined, undefined, '闲', undefined, undefined, '陷', undefined, undefined, '平'],
-  '左辅': [undefined, undefined, '庙', '旺', undefined, undefined, '旺', undefined, undefined, undefined, undefined, undefined],
+  '左辅': [undefined, undefined, '庙', '旺', undefined, undefined, '平', undefined, undefined, undefined, undefined, undefined],
   '年解': ['庙', '庙', '庙', '旺', '庙', '平', '闲', '旺', '庙', '平', '庙', '平'],
   '恩光': ['平', '庙', '庙', '平', '庙', '旺', '平', '陷', '庙', '闲', '平', '庙'],
   '擎羊': [undefined, '陷', '庙', undefined, '陷', '庙', undefined, '陷', '庙', undefined, '陷', '庙'],
   '文昌': [undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, '陷', undefined, undefined, undefined],
-  '文曲': [undefined, undefined, '旺', undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined],
+  '文曲': [undefined, undefined, '庙', undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined],
   '月德': ['陷', '闲', '平', '陷', '旺', '平', '陷', '闲', '平', '陷', '旺', '平'],
-  '火星': ['庙', '旺', undefined, undefined, undefined, undefined, undefined, '平', undefined, undefined, undefined, '平'],
+  '火星': ['庙', '旺', undefined, undefined, undefined, undefined, undefined, '平', undefined, undefined, undefined, '旺'],
   '破碎': [undefined, undefined, undefined, '陷', undefined, undefined, undefined, '平', undefined, undefined, undefined, '陷'],
   '禄存': ['庙', '旺', undefined, '庙', '旺', undefined, '庙', '旺', undefined, '庙', '旺', undefined],
   '红鸾': ['旺', '庙', '庙', '旺', '旺', '陷', '庙', '旺', '陷', '庙', '庙', '陷'],
-  '铃星': [undefined, '旺', undefined, undefined, undefined, undefined, undefined, undefined, '庙', undefined, undefined, undefined],
+  '铃星': [undefined, '庙', undefined, undefined, undefined, undefined, undefined, undefined, '庙', undefined, undefined, undefined],
   '陀罗': ['陷', undefined, '庙', '陷', undefined, '庙', '陷', undefined, '庙', '陷', undefined, '庙'],
   '龙池': ['平', '庙', '庙', '陷', '闲', '庙', '平', '庙', '陷', '旺', '旺', '平'],
 };
@@ -76,12 +79,19 @@ function applyBrightnessToStar(star: Star, label: string) {
   star.brightness = labelToBrightness(label);
 }
 
-/** 为命盘网格辅星/煞星补齐生产环境亮度（主星由 iztro 混合亮度表负责） */
-export function applyGridBrightness(palaces: Palace[]) {
+/** 为命盘网格辅星/煞星补齐生产环境亮度；主星以混合亮度表覆盖 iztro 结果 */
+export function applyGridBrightness(
+  palaces: Palace[],
+  brightnessSchool: WenmoConfig['brightnessSchool'] = 'default',
+) {
   for (const palace of palaces) {
+    const yin = branchToYinIndex(palace.branch);
     for (const star of palace.stars) {
       if (star.type === 'major') {
-        if (star.brightnessLabel) {
+        const label = lookupMajorBrightness(brightnessSchool, star.name, yin);
+        if (label) {
+          applyBrightnessToStar(star, label);
+        } else if (star.brightnessLabel) {
           star.brightnessRaw = star.brightnessLabel;
         }
         continue;

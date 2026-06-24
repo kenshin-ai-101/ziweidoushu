@@ -2409,10 +2409,15 @@ body:has(.chart-page-root) {
   position: absolute;
   top: 24px;
   left: 6px;
-  right: 38px;
-  bottom: 52px;
+  right: 32px;
+  bottom: 44px;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.chart-board--production .palace-cell-stars::-webkit-scrollbar {
+  display: none;
 }
 .chart-board--production .palace-cell--empty .palace-cell-stars {
   top: 38px;
@@ -2459,9 +2464,12 @@ body:has(.chart-page-root) {
 }
 .chart-board--production .palace-star-columns {
   display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
   align-items: flex-start;
-  gap: 6px;
+  gap: 5px 4px;
   min-width: 0;
+  max-width: 100%;
   padding-top: 2px;
 }
 .chart-board--production .palace-star-col {
@@ -2706,7 +2714,8 @@ body:has(.chart-page-root) {
   }
   .chart-board--production .palace-cell-stars {
     top: 20px;
-    bottom: 46px;
+    bottom: 40px;
+    right: 28px;
   }
   .chart-board--production .palace-cell--empty .palace-cell-stars {
     top: 32px;
@@ -2716,7 +2725,7 @@ body:has(.chart-page-root) {
     font-size: 9px !important;
   }
   .chart-board--production .palace-star-columns {
-    gap: 4px;
+    gap: 4px 3px;
   }
   .chart-board--production .palace-star-col--major {
     font-size: 11px;

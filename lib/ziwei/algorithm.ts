@@ -39,18 +39,12 @@ function mapBrightness(b?: string): 'bright' | 'normal' | 'dim' {
 // ─── 星曜类型映射 ────────────────────────────────────────────────
 const SHA_STARS = new Set(['擎羊', '陀罗', '火星', '铃星', '地空', '地劫',
   '天空', '旬空', '截路', '空亡', '大耗', '天使', '天伤', '灾煞', '天煞', '月煞', '亡神',
-  '阴煞', '天月', '天哭', '天虚', '蜚廉', '寡宿', '孤辰', '天刑']);
+  '阴煞', '天月', '天哭', '天虚', '蜚廉', '寡宿', '孤辰', '天刑', '劫煞']);
 const LUCKY_STARS = new Set(['文昌', '文曲', '左辅', '右弼', '天魁', '天钺',
   '禄存', '天马', '天官', '天福', '天才', '天寿', '三台', '八座', '恩光',
   '天贵', '台辅', '龙池', '凤阁', '红鸾', '天喜', '解神', '年解', '华盖',
   '月德', '天德', '天巫', '封诰']);
 const FLOWER_LUCKY = new Set(['红鸾', '天喜']);
-
-/** 生产命盘网格不展示的岁前/将前十二神（iztro 有值但文墨盘面省略） */
-const YEARLY_GRID_EXCLUDED = new Set([
-  '岁建', '晦气', '丧门', '贯索', '官符', '小耗', '大耗', '吊客', '病符',
-  '将星', '攀鞍', '岁驿', '息神', '指背', '月煞', '亡神', '灾煞', '天煞', '白虎',
-]);
 
 function mapStarType(starName: string, iztroType: string): Star['type'] {
   if (SHA_STARS.has(starName)) return 'sha';
@@ -62,6 +56,9 @@ function mapStarType(starName: string, iztroType: string): Star['type'] {
   if (t === 'flower') return FLOWER_LUCKY.has(starName) ? 'lucky' : 'minor';
   return 'minor';
 }
+
+/** 命盘网格展示的岁前/将前星（仅龙德、劫煞） */
+const YEARLY_GRID_STARS = new Set(['龙德', '劫煞']);
 
 // ─── 五行局名称 → 数字 ──────────────────────────────────────────
 function parseWuxingJu(name: string): number {
@@ -75,7 +72,6 @@ function parseWuxingJu(name: string): number {
 
 import {
   DEFAULT_WENMO_CONFIG,
-  isDefaultWenmoConfig,
   normalizeWenmoConfig,
   type WenmoConfig,
 } from './school-config';
@@ -107,10 +103,8 @@ export function generateChart(birthInfo: BirthInfo, options?: GenerateChartOptio
 
     const resolvedBirth = applyResolvedBirthInfo(birthInfo, params);
     const chart = buildChartFromAstrolabe(astrolabe, resolvedBirth, wenmoConfig);
-    const processed = isDefaultWenmoConfig(wenmoConfig)
-      ? chart
-      : applyWenmoPostProcess(chart, wenmoConfig, params);
-    applyGridBrightness(processed.palaces);
+    const processed = applyWenmoPostProcess(chart, wenmoConfig, params);
+    applyGridBrightness(processed.palaces, wenmoConfig.brightnessSchool);
     return {
       ...processed,
       _chartToken: computeChartToken(processed),
@@ -121,7 +115,7 @@ export function generateChart(birthInfo: BirthInfo, options?: GenerateChartOptio
 function appendYearlyDecorStars(stars: Star[], names: Array<string | undefined>) {
   const existing = new Set(stars.map(s => s.name));
   for (const name of names) {
-    if (!name || existing.has(name) || YEARLY_GRID_EXCLUDED.has(name)) continue;
+    if (!name || existing.has(name) || !YEARLY_GRID_STARS.has(name)) continue;
     stars.push({ name, type: mapStarType(name, '') });
     existing.add(name);
   }

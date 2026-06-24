@@ -133,7 +133,8 @@ function applyChangsheng(palaces: Palace[], chart: ZiweiChart, wenmo: WenmoConfi
 }
 
 function applyJiekong(palaces: Palace[], stem: number, school: WenmoConfig['jiekongSchool']) {
-  removeStars(palaces, ['截路', '空亡', '旬空']);
+  // 保留 iztro 原局旬空（如福德宫），仅重置截路/空亡
+  removeStars(palaces, ['截路', '空亡']);
   const jielu = fixIndex([8, 6, 4, 2, 0][stem % 5]);
   const kongwang = fixIndex([9, 7, 5, 3, 1][stem % 5]);
   if (school === 'double') {
