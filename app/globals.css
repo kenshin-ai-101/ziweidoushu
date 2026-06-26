@@ -2376,13 +2376,45 @@ body:has(.chart-page-root) {
   color: var(--tx-3) !important;
   font-size: 9px !important;
 }
+.chart-board--production .palace-cell-name-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0 !important;
+  padding: 0;
+  padding-right: 0 !important;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--star-major);
+  line-height: 1.25;
+}
+.chart-board--production .palace-cell-name-row--ming {
+  color: var(--star-major);
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(168, 50, 40, 0.14);
+  border: 1px solid rgba(168, 50, 40, 0.35);
+}
+.chart-board--production .palace-cell-name-row--shen {
+  color: var(--star-major);
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(168, 50, 40, 0.08);
+  border: 1px solid rgba(168, 50, 40, 0.25);
+}
+.chart-board--production .palace-cell-name-mark {
+  font-size: 11px;
+  opacity: 0.9;
+}
+/* legacy selector kept for older markup */
 .chart-board--production .palace-cell-name {
   position: static;
   display: block;
   padding: 0 !important;
   margin: 0 !important;
-  color: var(--tx-0);
-  font-size: 16px;
+  color: var(--star-major);
+  font-size: 12px;
   line-height: 20px;
   text-align: right;
 }
@@ -2399,10 +2431,12 @@ body:has(.chart-page-root) {
 }
 .chart-board--production .palace-cell-ganzhi {
   margin: 0 !important;
-  color: var(--tx-0) !important;
+  color: var(--tx-1) !important;
   opacity: 1 !important;
-  font-size: 12px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
   line-height: 14px;
+  letter-spacing: 0.04em;
   text-align: right;
 }
 .chart-board--production .palace-cell-stars {
@@ -2438,10 +2472,10 @@ body:has(.chart-page-root) {
 }
 .chart-board--production .palace-cell-name > span:first-child {
   display: block;
-  color: inherit !important;
-  font-size: 16px !important;
-  font-weight: 400 !important;
-  letter-spacing: 0 !important;
+  color: var(--star-major) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
 }
 .chart-board--production .palace-cell-name > span:first-child::first-letter {
   font-family: var(--font-mono);
@@ -2504,14 +2538,17 @@ body:has(.chart-page-root) {
 .chart-board--production .palace-star-col--lucky {
   color: var(--star-lucky);
   font-size: 10.5px;
+  font-weight: 600;
 }
 .chart-board--production .palace-star-col--sha {
   color: var(--star-sha);
   font-size: 10.5px;
+  font-weight: 600;
 }
 .chart-board--production .palace-star-col--minor {
   color: var(--star-minor);
   font-size: 10.5px;
+  font-weight: 500;
 }
 .chart-board--production .palace-star-name span {
   display: block;
@@ -2586,6 +2623,89 @@ body:has(.chart-page-root) {
   color: var(--quan);
   border: 1px solid color-mix(in srgb, var(--quan) 35%, transparent);
   background: color-mix(in srgb, var(--quan) 12%, transparent);
+}
+.palace-cell-name-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 2px;
+  padding-right: 2rem;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--star-major);
+}
+.palace-cell-name-row--ming {
+  color: var(--ke);
+}
+.palace-cell-name-row--shen {
+  color: var(--quan);
+}
+.palace-cell-name-mark {
+  font-size: 9px;
+  opacity: 0.85;
+}
+.palace-cell-ganzhi {
+  font-size: 9px;
+  color: var(--tx-1);
+  font-weight: 600;
+  opacity: 0.85;
+}
+.palace-star-columns {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
+  gap: 4px 3px;
+}
+.palace-star-col {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
+}
+.palace-star-col--major {
+  color: var(--star-major);
+  font-size: 11px;
+  font-weight: 700;
+}
+.palace-star-col--lucky {
+  color: var(--star-lucky);
+  font-size: 10px;
+  font-weight: 600;
+}
+.palace-star-col--sha {
+  color: var(--star-sha);
+  font-size: 10px;
+  font-weight: 600;
+}
+.palace-star-col--minor {
+  color: var(--star-minor);
+  font-size: 10px;
+  font-weight: 500;
+}
+.palace-star-name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.palace-star-name span {
+  display: block;
+  line-height: 1;
+}
+.palace-star-brightness {
+  margin-top: 1px;
+  color: var(--star-minor);
+  font-size: 7px;
+  font-weight: 500;
+  line-height: 1;
 }
 .chart-board--production .palace-cell-tag {
   width: 13px;
@@ -2703,7 +2823,7 @@ body:has(.chart-page-root) {
     min-height: 74px !important;
     padding: 6px 5px 5px !important;
   }
-  .palace-cell-name { padding-right: 22px !important; }
+  .palace-cell-name-row { padding-right: 22px !important; }
   .palace-center-tile {
     padding: 10px 6px !important;
     gap: 6px !important;
@@ -3462,6 +3582,28 @@ body:has(.oracle-subpage) {
   width: 14px !important;
   height: 14px !important;
   padding: 0 !important;
+}
+.birth-form--oracle .birth-form-unknown-time-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 8px;
+  cursor: pointer;
+}
+.birth-form--oracle .birth-form-unknown-time-toggle input {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  margin-top: 2px;
+  padding: 0 !important;
+  flex-shrink: 0;
+  border-radius: 4px !important;
+  background: #fff !important;
+}
+.birth-form--oracle .birth-form-unknown-time-toggle span {
+  font-size: 12px !important;
+  color: #888 !important;
+  line-height: 1.4;
 }
 .birth-form--oracle .birth-form-time-panel {
   background: #fafafa !important;

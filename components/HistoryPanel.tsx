@@ -314,7 +314,7 @@ export default function HistoryPanel({
                       savedAt: Date.now(),
                     }));
                   } catch {}
-                  router.push('/heming');
+                  router.push('/heming?from=history');
                 }}
                 onDelete={() => {
                   removeHemingHistory(item.id);

@@ -679,6 +679,35 @@ async function fetchAnalysis(
   return data.text as string;
 }
 
+async function fetchSiHuaFocus(
+  chart: ZiweiChart,
+  sihua: SelectedSiHua,
+  options: {
+    view: TimeView;
+    liunianYear: number;
+    liuyueMonth: number;
+    liuriDay: number;
+    liushiHour: number;
+  },
+): Promise<string> {
+  const chartToken = getChartToken(chart);
+  if (!chartToken) return '会话已过期，请回到首页重新填写生辰起盘。';
+
+  const res = await fetch('/api/analysis', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chart, chartToken, sihuaFocus: sihua, options }),
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))).error;
+    throw new Error(err || `分析获取失败 (${res.status})`);
+  }
+
+  const data = await res.json();
+  return data.text as string;
+}
+
 export default function InsightPanel({
   chart,
   timeView = 'mingpan',
@@ -866,28 +895,18 @@ export default function InsightPanel({
       if (!palace) return;
 
       focusAbortRef.current?.abort();
-      const controller = new AbortController();
-      focusAbortRef.current = controller;
+      focusAbortRef.current = null;
       lastFocusKey.current = key;
 
-      const majors = palace.stars.filter(s => s.type === 'major');
-      const starDesc = majors.length > 0
-        ? majors.map(s => `${s.name}${s.siHua ? `化${s.siHua}` : ''}`).join('、')
-        : '空宫（借对宫）';
-      const role = PALACE_ROLES[palace.name] ?? '';
       const topic = PALACE_TO_TOPIC[palace.name] ?? 'overview';
 
       skipTopicEffect.current = true;
       activeTopicRef.current = topic;
       setActiveTopic(topic);
       setPanelMode('analysis');
-
-      const prompt = `请重点分析【${palace.name}】（主管：${role}），主星：${starDesc}，按结构输出：
-**【一句话结论】** **【核心判断】** **【命盘依据】** **【风险提醒】** **【行动建议】**`;
-
-      setContent('正在生成…');
-      void streamFollowUp(prompt, controller.signal);
-      return () => controller.abort();
+      setLoading(true);
+      void loadTopic(topic).finally(() => setLoading(false));
+      return;
     }
 
     if (selectedSiHua) {
@@ -899,24 +918,20 @@ export default function InsightPanel({
       focusAbortRef.current = controller;
       lastFocusKey.current = key;
 
-      const palaceOfStar = chartRef.current.palaces.find(
-        p => p.stars.some(s => s.name === selectedSiHua.starName),
-      );
-      const palaceName = palaceOfStar?.name ?? '';
-      const viewLabel =
-        selectedSiHua.view === 'daxian' ? '大限'
-          : selectedSiHua.view === 'liunian' ? '流年'
-            : selectedSiHua.view === 'liuyue' ? '流月'
-              : selectedSiHua.view === 'liuri' ? '流日'
-                : selectedSiHua.view === 'liushi' ? '流时'
-                  : '本命';
-
       setPanelMode('analysis');
-      const prompt = `请分析【${viewLabel}${selectedSiHua.starName}化${selectedSiHua.siHua}】落于【${palaceName}】的飞化影响，按结构输出：
-**【一句话结论】** **【核心判断】** **【命盘依据】** **【风险提醒】** **【行动建议】**`;
-
       setContent('正在生成…');
-      void streamFollowUp(prompt, controller.signal);
+
+      void (async () => {
+        try {
+          const text = await fetchSiHuaFocus(chartRef.current, selectedSiHua, analysisOptions);
+          if (controller.signal.aborted) return;
+          setContent(text);
+        } catch (err) {
+          if (controller.signal.aborted) return;
+          setContent(err instanceof Error ? err.message : '分析获取失败，请稍后重试');
+        }
+      })();
+
       return () => controller.abort();
     }
   }, [selectedPalaceBranch, selectedSiHua, chartToken]); // eslint-disable-line react-hooks/exhaustive-deps

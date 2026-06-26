@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import { HEMING_QUOTA_COOKIE_NAME } from '@/lib/ai/heming-quota';
 import { QUOTA_COOKIE_NAME } from '@/lib/ai/quota';
@@ -26,10 +27,12 @@ export default async function HemingPage() {
   );
 
   return (
-    <HemingPageClient
-      serverQuotaRemaining={snapshot.remaining}
-      serverDailyLimit={dailyLimit}
-      serverIsLoggedIn={!!session}
-    />
+    <Suspense fallback={null}>
+      <HemingPageClient
+        serverQuotaRemaining={snapshot.remaining}
+        serverDailyLimit={dailyLimit}
+        serverIsLoggedIn={!!session}
+      />
+    </Suspense>
   );
 }

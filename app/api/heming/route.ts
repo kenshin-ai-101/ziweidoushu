@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { DeepSeekStream } from '@/lib/ai/stream';
+import { DeepSeekStream, createLocalTextStream } from '@/lib/ai/stream';
 import {
   HEMING_QUOTA_COOKIE_NAME,
   buildQuotaCookieValue as buildHemingQuotaCookieValue,
@@ -18,10 +18,10 @@ import {
   rollbackSharedQuota,
   snapshotSharedQuota,
 } from '@/lib/subscription/shared-quota';
+import { buildLocalHemingText } from '@/lib/ziwei/heming-facts';
 import {
   buildFollowUpHemingMessages,
   buildHemingSystemPrompt,
-  buildInitialHemingMessages,
 } from '@/lib/ziwei/heming-prompts';
 import type { ZiweiChart } from '@/lib/ziwei/types';
 
@@ -131,17 +131,15 @@ export async function POST(req: NextRequest) {
       hemingState = snapshot.heming;
     }
 
-    const messages = question
-      ? buildFollowUpHemingMessages({
-          previousAnalysis: body.previousAnalysis,
-          question,
+    const stream = isFollowUp
+      ? await DeepSeekStream({
+          systemPrompt: buildHemingSystemPrompt(chartA, chartB),
+          messages: buildFollowUpHemingMessages({
+            previousAnalysis: body.previousAnalysis,
+            question: question!,
+          }),
         })
-      : buildInitialHemingMessages();
-
-    const stream = await DeepSeekStream({
-      systemPrompt: buildHemingSystemPrompt(chartA, chartB),
-      messages,
-    });
+      : createLocalTextStream(buildLocalHemingText(chartA, chartB));
 
     const headers = new Headers({
       'Content-Type': 'text/event-stream',

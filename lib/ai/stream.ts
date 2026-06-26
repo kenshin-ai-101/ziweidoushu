@@ -86,3 +86,16 @@ export async function DeepSeekStream({ systemPrompt, messages }: DeepSeekStreamO
     },
   });
 }
+
+/** Emit a one-shot SSE body compatible with interpret/heming clients — no LLM call. */
+export function createLocalTextStream(text: string): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    start(controller) {
+      const payload = JSON.stringify({ delta: { text } });
+      controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
+      controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+      controller.close();
+    },
+  });
+}

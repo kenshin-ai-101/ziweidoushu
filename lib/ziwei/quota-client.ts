@@ -17,12 +17,20 @@ export function getClientQuotaRemaining(dailyLimit = FREE_DAILY_INTERPRET_QUOTA)
   return getClientSharedQuotaRemaining(dailyLimit);
 }
 
-export function syncQuotaRemaining(remaining: number) {
-  if (typeof window === 'undefined' || !Number.isFinite(remaining)) return;
-  const payload: QuotaMirror = {
-    date: getBeijingDateKey(),
-    remaining: Math.max(0, remaining),
-  };
+export function syncQuotaRemaining(remaining: number): boolean {
+  if (typeof window === 'undefined' || !Number.isFinite(remaining)) return false;
+  const date = getBeijingDateKey();
+  const nextRemaining = Math.max(0, remaining);
+  try {
+    const raw = localStorage.getItem(MIRROR_KEY);
+    if (raw) {
+      const prev = JSON.parse(raw) as QuotaMirror;
+      if (prev.date === date && prev.remaining === nextRemaining) return false;
+    }
+  } catch {
+    /* continue */
+  }
+  const payload: QuotaMirror = { date, remaining: nextRemaining };
   try {
     localStorage.setItem(MIRROR_KEY, JSON.stringify(payload));
   } catch {
@@ -30,6 +38,7 @@ export function syncQuotaRemaining(remaining: number) {
   }
   window.dispatchEvent(new CustomEvent(QUOTA_UPDATE_EVENT, { detail: payload.remaining }));
   notifySharedQuotaStoreChange();
+  return true;
 }
 
 export function subscribeQuotaRemaining(onChange: (remaining: number) => void): () => void {

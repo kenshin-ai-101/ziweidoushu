@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { MembershipEditionButton } from '@/components/MembershipEditionButton';
 import BirthForm, { type BirthFormState } from '@/components/BirthForm';
 import LoginModal from '@/components/LoginModal';
@@ -11,7 +12,6 @@ import {
   syncHemingQuotaRemaining,
 } from '@/lib/ziwei/heming-quota-client';
 import { useHemingQuotaRemaining } from '@/hooks/use-quota-remaining';
-import { subscribeSharedQuotaStore } from '@/lib/subscription/shared-quota-client';
 import { formToBirthInfo } from '@/lib/ziwei/share';
 import { saveHemingHistory } from '@/lib/ziwei/heming-history';
 import {
@@ -20,6 +20,7 @@ import {
   writeHemingCache,
 } from '@/lib/ziwei/heming-cache';
 import {
+  clearHemingSession,
   loadHemingSession,
   saveHemingSession,
   type HemingFollowUpEntry,
@@ -134,6 +135,8 @@ export default function HemingPageClient({
   serverIsLoggedIn: boolean;
 }) {
   const { isLoggedIn: clientIsLoggedIn, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const fromHistory = searchParams.get('from') === 'history';
   const isLoggedIn = clientIsLoggedIn || serverIsLoggedIn;
   const [loginOpen, setLoginOpen] = useState(false);
   const [accountQuota, setAccountQuota] = useState<AccountQuotaResponse | null>(null);
@@ -141,6 +144,7 @@ export default function HemingPageClient({
   const [chartB, setChartB] = useState<ZiweiChart | null>(null);
   const [formA, setFormA] = useState<BirthFormState | null>(null);
   const [formB, setFormB] = useState<BirthFormState | null>(null);
+  const [formSeed, setFormSeed] = useState(0);
 
   const [analysis, setAnalysis] = useState('');
   const [followUps, setFollowUps] = useState<HemingFollowUpEntry[]>([]);
@@ -205,23 +209,46 @@ export default function HemingPageClient({
     };
 
     refreshQuota();
-    const unsubscribe = subscribeSharedQuotaStore(refreshQuota);
 
     return () => {
       active = false;
-      unsubscribe();
     };
   }, [isLoggedIn]);
 
   useEffect(() => {
-    const session = loadHemingSession();
-    if (!session) return;
-    setFormA(session.formA);
-    setFormB(session.formB);
-    if (session.chartA) setChartA(session.chartA);
-    if (session.chartB) setChartB(session.chartB);
-    setAnalysis(session.analysis || '');
-    setFollowUps(session.followUps || []);
+    if (fromHistory) {
+      const session = loadHemingSession();
+      if (!session) return;
+      setFormA(session.formA);
+      setFormB(session.formB);
+      setFormSeed(seed => seed + 1);
+      return;
+    }
+
+    clearHemingSession();
+    setChartA(null);
+    setChartB(null);
+    setAnalysis('');
+    setFollowUps([]);
+    setAnalysisError(null);
+    setFormError(null);
+    setQuestion('');
+  }, [fromHistory]);
+
+  const startNewHeming = useCallback(() => {
+    abortRef.current?.abort();
+    clearHemingSession();
+    setChartA(null);
+    setChartB(null);
+    setFormA(null);
+    setFormB(null);
+    setAnalysis('');
+    setFollowUps([]);
+    setAnalysisError(null);
+    setFormError(null);
+    setQuestion('');
+    setFormSeed(seed => seed + 1);
+    analysisRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
   useEffect(() => {
@@ -510,8 +537,10 @@ export default function HemingPageClient({
           <div style={cardStyle}>
             <span style={labelStyle}>甲方 — A</span>
             <BirthForm
+              key={`heming-a-${formSeed}`}
               hideSubmit
               appearance="light"
+              initialData={formA ?? undefined}
               onSubmit={() => {}}
               onFormSave={setFormA}
             />
@@ -521,8 +550,10 @@ export default function HemingPageClient({
           <div style={cardStyle}>
             <span style={labelStyle}>乙方 — B</span>
             <BirthForm
+              key={`heming-b-${formSeed}`}
               hideSubmit
               appearance="light"
+              initialData={formB ?? undefined}
               onSubmit={() => {}}
               onFormSave={setFormB}
             />
@@ -549,6 +580,24 @@ export default function HemingPageClient({
               border: '0.5px solid rgba(0,0,0,0.20)', padding: '2px 8px',
               borderRadius: 'var(--r-pill)', letterSpacing: '0.04em',
             }}>{quotaLabel}</span>
+            {analysis && !analyzing && (
+              <button
+                type="button"
+                onClick={startNewHeming}
+                style={{
+                  fontSize: '12px',
+                  padding: '4px 12px',
+                  borderRadius: 'var(--r-pill)',
+                  border: '0.5px solid rgba(0,0,0,0.20)',
+                  background: 'transparent',
+                  color: 'var(--tx-2)',
+                  cursor: 'pointer',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                重新合盘
+              </button>
+            )}
           </div>
 
           {/* 状态分支 */}

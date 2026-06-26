@@ -36,6 +36,22 @@ const starTypeClass: Record<Star['type'], string> = {
   minor: 'palace-star-col--minor',
 };
 
+const STAR_TYPE_ORDER: Star['type'][] = ['major', 'lucky', 'sha', 'minor'];
+
+/** 与生产一致：主星 → 吉星 → 煞星 → 杂耀，同类型内保留 iztro 原序 */
+function sortStarsByType(stars: Star[]): Star[] {
+  const buckets: Record<Star['type'], Star[]> = {
+    major: [],
+    lucky: [],
+    sha: [],
+    minor: [],
+  };
+  for (const star of stars) {
+    buckets[star.type].push(star);
+  }
+  return STAR_TYPE_ORDER.flatMap(type => buckets[type]);
+}
+
 function splitChars(text: string) {
   return Array.from(text).map((ch, i) => <span key={`${ch}-${i}`}>{ch}</span>);
 }
@@ -76,8 +92,7 @@ export default function PalaceCell({
   const majorStars = stars.filter(s => s.type === 'major');
   const luckyStars = stars.filter(s => s.type === 'lucky');
   const isEmptyPalace = majorStars.length === 0;
-  /** 与生产盘面一致：保留 iztro 原始星曜顺序，不按类型重排 */
-  const shownStars = stars;
+  const shownStars = sortStarsByType(stars);
   const borrowedHint = isEmptyPalace && palace.borrowedStars?.length
     ? `借${palace.borrowedFromName?.replace(/宫$/, '') ?? '对'}·${palace.borrowedStars.join('')}`
     : '';
@@ -176,20 +191,16 @@ export default function PalaceCell({
       {/* 宫名 + 干支（生产模式由 CSS 堆叠在右下角） */}
       <div className="palace-cell-footer">
         <div className="palace-cell-ganzhi font-mono">{ganzhi}</div>
-        <div className="palace-cell-name flex items-center gap-1 mb-0.5 pr-8">
-          <span className={clsx('text-[10px] font-medium tracking-wide',
-            isMingGong ? 'text-amber-500' : isShenGong ? 'text-sky-500' : ''
+        <div
+          className={clsx(
+            'palace-cell-name-row',
+            isMingGong && 'palace-cell-name-row--ming',
+            isShenGong && 'palace-cell-name-row--shen',
           )}
-            style={!isMingGong && !isShenGong ? { color: 'var(--t-faint)' } : undefined}
-          >
-            {displayName}
-          </span>
-          {isMingGong && (
-            <span className="palace-cell-tag palace-cell-tag--ming">命</span>
-          )}
-          {isShenGong && (
-            <span className="palace-cell-tag palace-cell-tag--shen">身</span>
-          )}
+        >
+          <span className="palace-cell-name-label">{displayName}</span>
+          {isMingGong && <span className="palace-cell-name-mark">·命</span>}
+          {isShenGong && <span className="palace-cell-name-mark">·身</span>}
         </div>
       </div>
 

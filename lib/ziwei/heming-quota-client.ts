@@ -1,18 +1,11 @@
-import { getBeijingDateKey } from '@/lib/ai/quota';
 import { FREE_DAILY_INTERPRET_QUOTA } from '@/lib/subscription/plans';
 import {
   getClientSharedQuotaRemaining,
-  notifySharedQuotaStoreChange,
   resolveSharedQuotaSnapshot,
 } from '@/lib/subscription/shared-quota-client';
+import { syncQuotaRemaining } from '@/lib/ziwei/quota-client';
 
-const MIRROR_KEY = 'heming_quota_mirror';
 export const HEMING_QUOTA_UPDATE_EVENT = 'ziwei-heming-quota-update';
-
-interface QuotaMirror {
-  date: string;
-  remaining: number;
-}
 
 /** Resolve shared-pool remaining from both quota cookies (server / SSR). */
 export function resolveHemingQuotaRemaining(
@@ -29,18 +22,11 @@ export function getClientHemingQuotaRemaining(dailyLimit = FREE_DAILY_INTERPRET_
 }
 
 export function syncHemingQuotaRemaining(remaining: number) {
-  if (typeof window === 'undefined' || !Number.isFinite(remaining)) return;
-  const payload: QuotaMirror = {
-    date: getBeijingDateKey(),
-    remaining: Math.max(0, remaining),
-  };
-  try {
-    localStorage.setItem(MIRROR_KEY, JSON.stringify(payload));
-  } catch {
-    /* ignore */
-  }
-  window.dispatchEvent(new CustomEvent(HEMING_QUOTA_UPDATE_EVENT, { detail: payload.remaining }));
-  notifySharedQuotaStoreChange();
+  const changed = syncQuotaRemaining(remaining);
+  if (!changed || typeof window === 'undefined' || !Number.isFinite(remaining)) return;
+  window.dispatchEvent(
+    new CustomEvent(HEMING_QUOTA_UPDATE_EVENT, { detail: Math.max(0, remaining) }),
+  );
 }
 
 export function subscribeHemingQuotaRemaining(onChange: (remaining: number) => void): () => void {

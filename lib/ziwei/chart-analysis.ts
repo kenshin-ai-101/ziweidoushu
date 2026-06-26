@@ -723,3 +723,66 @@ export function buildAllTopicAnalysisTabs(
   }
   return tabs;
 }
+
+const SIHUA_VIEW_LABEL: Record<string, string> = {
+  mingpan: '本命',
+  daxian: '大限',
+  liunian: '流年',
+  liuyue: '流月',
+  liuri: '流日',
+  liushi: '流时',
+};
+
+export interface SiHuaFocusInput {
+  starName: string;
+  siHua: string;
+  view: string;
+}
+
+/** Local siHua focus copy — no LLM; used when user clicks a 四化 tag on the chart. */
+export function buildSiHuaFocusText(
+  chart: ZiweiChart,
+  focus: SiHuaFocusInput,
+): string {
+  const palace = chart.palaces.find(p => p.stars.some(s => s.name === focus.starName));
+  const palaceName = palace?.name ?? '对应宫位';
+  const palaceRole: Record<string, string> = {
+    命宫: '自我格局与人生主线',
+    兄弟: '兄弟合伙与人际协作',
+    夫妻: '感情婚姻与亲密关系',
+    子女: '子女缘分与创造力',
+    财帛: '财富收入与理财方式',
+    疾厄: '身体健康与内在压力',
+    迁移: '外出发展与公众形象',
+    交友: '朋友贵人与社交圈层',
+    官禄: '事业职业与社会成就',
+    田宅: '家宅资产与家族根基',
+    福德: '精神世界与享乐方式',
+    父母: '父母长辈与文书证照',
+  };
+  const roleLabel = palaceRole[palaceName] ?? palaceName;
+  const viewLabel = SIHUA_VIEW_LABEL[focus.view] ?? '本命';
+  const effect = SIHUA_EFFECT[focus.starName]?.[focus.siHua as '禄' | '权' | '科' | '忌'];
+  const brightness = palace?.stars.find(s => s.name === focus.starName)?.brightness;
+
+  return [
+    '**【一句话结论】**',
+    `${viewLabel}层级中，${focus.starName}化${focus.siHua}落于${palaceName}，主要牵动${roleLabel}。`,
+    '',
+    '**【核心判断】**',
+    effect
+      ? `${focus.starName}化${focus.siHua}：${effect}`
+      : `${focus.starName}化${focus.siHua}会改变该宫主管领域的节奏、得失与互动方式，需结合三方四正与当前大限流年综合判断。`,
+    '',
+    '**【命盘依据】**',
+    `${focus.starName}坐守${palaceName}${brightness ? `（${brightness}）` : ''}；${viewLabel}四化代表阶段性引动，本命四化为底盘，时间层只负责触发，不改变本命结构。`,
+    '',
+    '**【风险提醒】**',
+    focus.siHua === '忌'
+      ? '化忌时宜放慢决策、避免硬扛与情绪化对抗，先处理可执行的现实问题。'
+      : '吉星亦需防过度依赖单一落点，避免把好运当成无需经营的理所当然。',
+    '',
+    '**【行动建议】**',
+    `先把${roleLabel}的目标与边界写清楚，再观察接下来 1-3 个月在现实事务中的对应变化；需要更深入时可使用下方追问或 AI 对话。`,
+  ].join('\n');
+}
