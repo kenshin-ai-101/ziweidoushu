@@ -23,6 +23,12 @@ import {
   PALACE_TO_TOPIC,
   type TopicKey,
 } from '@/lib/ziwei/db-analysis';
+import PatternsChip from '@/components/PatternsChip';
+import SourceCredibilityBar from '@/components/SourceCredibilityBar';
+import {
+  getTopicPrimaryStar,
+  resolveSourceCredibility,
+} from '@/lib/ziwei/source-credibility';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import ChatPanel, { type ChatPanelHandle } from '@/components/ChatPanel';
@@ -68,6 +74,46 @@ const OVERVIEW_AXES = [
   { key: 'health', label: '健康' },
   { key: 'overall', label: '综合' },
 ] as const;
+
+const ICON_ADVANTAGE = (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 3l2.2 5.6L20 9.3l-4.4 3.7L17 19l-5-3.2L7 19l1.4-6L4 9.3l5.8-.7z" />
+  </svg>
+);
+
+const ICON_RELATIONSHIP = (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="8.5" cy="9" r="3.2" />
+    <circle cx="15.5" cy="9" r="3.2" />
+    <path d="M3.5 19c0-2.8 2.2-4.6 5-4.6M20.5 19c0-2.8-2.2-4.6-5-4.6" />
+  </svg>
+);
+
+const ICON_GROWTH = (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M5 19V11M12 19V5M19 19v-5" />
+  </svg>
+);
+
+function OverviewInsightCard({
+  icon,
+  title,
+  body,
+}: {
+  icon: ReactNode;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="overview-card">
+      <div className="overview-card-head">
+        <span className="overview-card-icon">{icon}</span>
+        <strong>{title}</strong>
+      </div>
+      <p>{body}</p>
+    </div>
+  );
+}
 
 function palaceMajorText(chart: ZiweiChart, palaceName: string) {
   const palace = chart.palaces.find(p => p.name === palaceName || (palaceName === '仆役' && p.name === '交友'));
@@ -486,22 +532,11 @@ function OverviewVisualSummary({ chart }: { chart: ZiweiChart }) {
       </div>
       <p className="overview-footnote">六维强度依本盘星曜庙旺与格局推算，仅供参考</p>
       <div className="overview-cards">
-        <div>
-          <span>优</span>
-          <strong>核心优势</strong>
-          <p>{cards.advantage}</p>
-        </div>
-        <div>
-          <span>合</span>
-          <strong>关系模式</strong>
-          <p>{cards.relationship}</p>
-        </div>
-        <div>
-          <span>课</span>
-          <strong>成长课题</strong>
-          <p>{cards.growth}</p>
-        </div>
+        <OverviewInsightCard icon={ICON_ADVANTAGE} title="核心优势" body={cards.advantage} />
+        <OverviewInsightCard icon={ICON_RELATIONSHIP} title="关系模式" body={cards.relationship} />
+        <OverviewInsightCard icon={ICON_GROWTH} title="成长课题" body={cards.growth} />
       </div>
+      <div className="overview-visual-divider" />
     </div>
   );
 }
@@ -1037,6 +1072,13 @@ export default function InsightPanel({
     });
   };
 
+  const parsedContent = content && !content.startsWith('正在生成') ? parseAnalysisText(content) : null;
+  const primaryStar = parsedContent ? getTopicPrimaryStar(chart, activeTopic) : '';
+  const credibility = parsedContent && primaryStar
+    ? resolveSourceCredibility(primaryStar, activeTopic, chart.birthInfo.gender, parsedContent)
+    : null;
+  const showTopicAnalysis = FREE_TOPIC_KEYS.has(activeTopic) || isPro;
+
   return (
     <div className={`insight-panel-root${panelMode === 'chat' ? ' insight-panel-root--chat' : ''}`}>
       <div className="insight-flip-bar">
@@ -1112,6 +1154,21 @@ export default function InsightPanel({
           )}
           {content && activeTopic === 'overview' && !content.startsWith('正在生成') && (
             <OverviewVisualSummary chart={chart} />
+          )}
+          {content && parsedContent && showTopicAnalysis && (
+            <div className="insight-analysis-meta">
+              {credibility && primaryStar && (
+                <SourceCredibilityBar
+                  primaryStarName={primaryStar}
+                  topic={activeTopic}
+                  record={credibility}
+                />
+              )}
+              <div className="insight-analysis-meta-row">
+                <PatternsChip chart={chart} />
+                <span className="insight-ai-badge">AI 生成 · 仅供参考</span>
+              </div>
+            </div>
           )}
           {content && (
             <AiContent text={content} streaming={followUpLoading} />
