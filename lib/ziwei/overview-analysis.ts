@@ -15,6 +15,7 @@ import {
   STAR_BRIGHTNESS_OVERLAY,
   STAR_PALACE_LINE,
 } from './overview-knowledge';
+import { buildRichMingOverview } from './topic-overview-synthesis';
 
 interface ParsedDb {
   dingdiao: string;
@@ -454,8 +455,14 @@ export function buildOverviewAnalysisText(chart: ZiweiChart, options?: OverviewA
   const effectivePalace = hasEmpty && opposite ? opposite : ming;
   const rawDb = getAnalysisText(primaryStar, 'overview', gender);
   const parsed = parseDbMarkers(rawDb);
+  const personalityParsed = parseDbMarkers(getAnalysisText(primaryStar, 'personality', gender));
 
-  const intro = getOverviewIntro(mainStars) || parsed.lundian.split('\n')[0] || '';
+  const parsedForIntro = { dingdiao: parsed.dingdiao, lundian: parsed.lundian };
+  const intro = getOverviewIntro(mainStars)
+    || buildRichMingOverview(chart, mainStars, effectivePalace, parsedForIntro, {
+      personalityLundian: personalityParsed.lundian,
+    })
+    || '';
   const parts: string[] = [];
 
   parts.push(section('命格总览', intro));

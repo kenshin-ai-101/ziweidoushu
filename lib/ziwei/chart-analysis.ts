@@ -21,6 +21,7 @@ import {
   STAR_PALACE_LINE,
 } from './overview-knowledge';
 import { lookupTopicStarOverview } from './topic-overview-knowledge';
+import { buildRichTopicOverview } from './topic-overview-synthesis';
 import {
   buildHealthMingAuxBlock,
   buildHealthRenjiBlock,
@@ -596,26 +597,38 @@ function buildGenericSource(topic: TopicKey, stars: string[]) {
   ].join('\n');
 }
 
-function splitSentences(text: string) {
-  return text
-    .replace(/\s+/g, ' ')
-    .match(/[^。！？.!?]+[。！？.!?]?/g)
-    ?.map(s => s.trim())
-    .filter(Boolean) ?? [];
-}
-
-function buildTopicOverview(topic: TopicKey, palace: Palace | undefined, stars: string[], parsed: ParsedDb) {
+function buildTopicOverview(
+  chart: ZiweiChart,
+  topic: TopicKey,
+  palace: Palace | undefined,
+  stars: string[],
+  parsed: ParsedDb,
+) {
   const curated = lookupTopicStarOverview(topic, stars);
   if (curated) return curated;
 
+  const richOverview = buildRichTopicOverview(chart, topic, palace, stars, parsed);
+  if (richOverview) {
+    const action = TOPIC_OVERVIEW_ACTION[topic];
+    return action ? `${richOverview}\n\n${action}` : richOverview;
+  }
+
+  const dingdiao = parsed.dingdiao.trim();
+  if (dingdiao) {
+    const palaceName = TOPIC_PALACE_NAME[topic];
+    const starText = stars.length ? stars.join('、') : '空宫借星';
+    const lead = `${palaceName}以【${starText}】定调：${dingdiao}`;
+    const action = TOPIC_OVERVIEW_ACTION[topic] ?? '';
+    return [lead, action].filter(Boolean).join('\n\n');
+  }
+
   const palaceName = TOPIC_PALACE_NAME[topic];
   const starText = stars.length ? stars.join('、') : '空宫借星';
-  const core = splitSentences(parsed.lundian).slice(0, 3).join('');
   const palaceText = palace
     ? `${palaceName}以【${starText}】定调，须合参本宫、对宫与三方四正一起看。`
     : `${palaceName}未能定位到明确宫位。`;
   const action = TOPIC_OVERVIEW_ACTION[topic] ?? '';
-  return [core || palaceText, core ? palaceText : '', action].filter(Boolean).join('\n\n');
+  return [palaceText, action].filter(Boolean).join('\n\n');
 }
 
 function buildEnrichedHealthText(
@@ -634,7 +647,7 @@ function buildEnrichedHealthText(
   const yearSihua = buildHealthYearSihuaBlock(chart, palace);
 
   const parts = [
-    section('健康总览', buildTopicOverview('health', palace, stars, parsed)),
+    section('健康总览', buildTopicOverview(chart, 'health', palace, stars, parsed)),
     section('一句话定调', parsed.dingdiao || `${TOPIC_PALACE_NAME.health}以${stars.join('、') || '本宫'}为主要气象，须合参三方四正。`),
     section('核心论断', buildCoreWithOverlays(primaryStar, parsed, chart, palace) || parsed.lundian || baseText),
     section('命盘推演', buildTopicTuiyan(chart, 'health', palace, stars)),
@@ -674,7 +687,7 @@ function buildEnrichedTopicText(
 
   const { body: sihuaBody, title: sihuaTitle } = buildTopicSihua(chart, topic, palace, options);
   const parts = [
-    section(`${TOPIC_LABEL[topic]}总览`, buildTopicOverview(topic, palace, stars, parsed)),
+    section(`${TOPIC_LABEL[topic]}总览`, buildTopicOverview(chart, topic, palace, stars, parsed)),
     section('一句话定调', parsed.dingdiao || `${TOPIC_PALACE_NAME[topic]}以${stars.join('、') || '本宫'}为主要气象，须合参三方四正。`),
     section('核心论断', buildCoreWithOverlays(primaryStar, parsed, chart, palace) || parsed.lundian || baseText),
     section('命盘推演', buildTopicTuiyan(chart, topic, palace, stars)),
