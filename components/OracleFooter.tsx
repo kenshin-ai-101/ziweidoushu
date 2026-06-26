@@ -33,8 +33,8 @@ export function OracleFooter({ showBackLink = true }: { showBackLink?: boolean }
           <span>©2026 Metis</span>
         </p>
         <p className="oracle-site-footer-host">
-          主办主体：两江新区旺多鱼网络科技工作室（个体工商户） · 客服：
-          <a href="mailto:wdy778@outlook.com">wdy778@outlook.com</a>
+          主办主体：杭州市余杭区沈一点opc工作室 · 客服：
+          <a href="mailto:kenshinshen1314@gmail.com">kenshinshen1314@gmail.com</a>
         </p>
       </div>
     </footer>
