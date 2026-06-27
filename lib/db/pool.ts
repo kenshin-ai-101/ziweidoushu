@@ -10,6 +10,9 @@ export const pool =
   globalForPool.pgPool ??
   new Pool({
     connectionString: process.env.POSTGRES_URL,
+    ssl: {
+      rejectUnauthorized: false,
+    } as pg.PoolConfig['ssl'],
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
