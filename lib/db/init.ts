@@ -46,6 +46,10 @@ export async function initDb(): Promise<void> {
   // Add missing columns to existing tables (ignore errors if already exist)
   await query(`ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS membership_tier VARCHAR(16) NOT NULL DEFAULT 'free'`).catch(() => {});
   await query(`ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS membership_expires_at VARCHAR(32)`).catch(() => {});
-  await query(`ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS created_at VARCHAR(32)`).catch(() => {});
-  await query(`ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS updated_at VARCHAR(32)`).catch(() => {});
+
+  // Fix column types if they're wrong (BIGINT -> VARCHAR)
+  await query(`ALTER TABLE auth_users ALTER COLUMN created_at TYPE VARCHAR(32)`).catch(() => {});
+  await query(`ALTER TABLE auth_users ALTER COLUMN updated_at TYPE VARCHAR(32)`).catch(() => {});
+  await query(`ALTER TABLE auth_codes ALTER COLUMN created_at TYPE VARCHAR(32)`).catch(() => {});
+  await query(`ALTER TABLE auth_sessions ALTER COLUMN created_at TYPE VARCHAR(32)`).catch(() => {});
 }
