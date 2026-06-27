@@ -33,7 +33,8 @@ export async function POST(req: NextRequest) {
     if (isDevAuthMode()) payload.devCode = code;
 
     return NextResponse.json(payload);
-  } catch {
+  } catch (err) {
+    console.error('[send-code error]', err);
     return NextResponse.json({ success: false, error: '验证码发送失败' }, { status: 500 });
   }
 }
