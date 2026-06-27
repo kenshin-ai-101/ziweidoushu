@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { establishSession } from '@/lib/auth/auth-handlers';
 import { upgradeUserToLifetime } from '@/lib/auth/membership';
 import { readSession } from '@/lib/auth/session';
-import { getLatestPendingOrder, getOrder, markOrderPaid } from '@/lib/subscription/store';
+import { getLatestPendingOrder, getOrder, markOrderPaid } from '@/lib/subscription/store-pg';
 
 export const runtime = 'nodejs';
 

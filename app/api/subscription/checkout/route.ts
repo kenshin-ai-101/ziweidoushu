@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { establishSession } from '@/lib/auth/auth-handlers';
 import { upgradeUserToLifetime } from '@/lib/auth/membership';
 import { isDevAuthMode, readSession } from '@/lib/auth/session';
-import { createOrder, markOrderPaid } from '@/lib/subscription/store';
+import { PRO_SALE_PRICE_CENTS } from '@/lib/subscription/plans';
+import { createOrder, markOrderPaid } from '@/lib/subscription/store-pg';
 
 export const runtime = 'nodejs';
 
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '请先登录后再开通专业版', code: 'NEED_LOGIN' }, { status: 401 });
   }
 
-  const order = await createOrder(session.userId);
+  const order = await createOrder(session.userId, PRO_SALE_PRICE_CENTS);
 
   if (isDevAuthMode()) {
     await markOrderPaid(order.orderId);
