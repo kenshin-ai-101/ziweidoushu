@@ -2,6 +2,9 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
+// Supabase pooler uses custom CA - bypass TLS verification
+process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
+
 const globalForPool = globalThis as unknown as {
   pgPool: pg.Pool | undefined;
 };
