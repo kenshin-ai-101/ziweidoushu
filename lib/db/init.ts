@@ -10,8 +10,10 @@ export async function initDb(): Promise<void> {
       password_hash VARCHAR(255),
       membership_tier VARCHAR(16) NOT NULL DEFAULT 'free',
       membership_expires_at VARCHAR(32),
-      created_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT,
-      updated_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+      created_at VARCHAR(32) NOT NULL,
+      updated_at VARCHAR(32) NOT NULL,
+      UNIQUE(email),
+      UNIQUE(phone)
     )
   `);
 
@@ -22,7 +24,7 @@ export async function initDb(): Promise<void> {
       code VARCHAR(16) NOT NULL,
       purpose VARCHAR(16) NOT NULL,
       expires_at BIGINT NOT NULL,
-      created_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+      created_at VARCHAR(32) NOT NULL
     )
   `);
 
@@ -32,7 +34,7 @@ export async function initDb(): Promise<void> {
       session_id VARCHAR(64) PRIMARY KEY,
       user_id VARCHAR(32) NOT NULL,
       expires_at BIGINT NOT NULL,
-      created_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+      created_at VARCHAR(32) NOT NULL
     )
   `);
 
@@ -41,7 +43,9 @@ export async function initDb(): Promise<void> {
   await query(`CREATE INDEX IF NOT EXISTS idx_auth_users_phone ON auth_users(phone)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_id ON auth_sessions(user_id)`);
 
-  // Add missing columns to existing tables
+  // Add missing columns to existing tables (ignore errors if already exist)
   await query(`ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS membership_tier VARCHAR(16) NOT NULL DEFAULT 'free'`).catch(() => {});
   await query(`ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS membership_expires_at VARCHAR(32)`).catch(() => {});
+  await query(`ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS created_at VARCHAR(32)`).catch(() => {});
+  await query(`ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS updated_at VARCHAR(32)`).catch(() => {});
 }
