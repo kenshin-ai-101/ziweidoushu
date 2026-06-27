@@ -39,7 +39,9 @@ export async function POST(req: NextRequest) {
     }
 
     return establishSession(user.userId);
-  } catch {
-    return NextResponse.json({ success: false, error: '注册失败，请稍后重试' }, { status: 500 });
+  } catch (err) {
+    console.error('[register error]', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ success: false, error: '注册失败，请稍后重试: ' + msg }, { status: 500 });
   }
 }
