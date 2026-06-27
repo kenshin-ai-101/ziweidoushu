@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(payload);
   } catch (err) {
     console.error('[send-code error]', err);
-    return NextResponse.json({ success: false, error: '验证码发送失败' }, { status: 500 });
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ success: false, error: '验证码发送失败: ' + message }, { status: 500 });
   }
 }
